@@ -11,6 +11,9 @@ import (
 
 // projectHTMLVars builds placeholder values for a project's landing HTML.
 func projectHTMLVars(project *models.Project) utils.ProjectHTMLVars {
+	if project == nil {
+		return utils.ProjectHTMLVars{SubmitURL: "/api/submit"}
+	}
 	vars := utils.ProjectHTMLVars{
 		SubmitURL:   project.ContainerRoute,
 		RedirectURL: project.LoginURL,

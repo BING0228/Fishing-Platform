@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDown } from "lucide-react";
+import { RiArrowDownSLine } from "@remixicon/react";
 import { DayPicker } from "react-day-picker";
 import { cn } from "@/lib/utils";
 
@@ -66,7 +66,7 @@ function Calendar({
         ...classNames,
       }}
       components={{
-        Chevron: () => <ChevronDown className="h-3.5 w-3.5 text-slate-500" />,
+        Chevron: () => <RiArrowDownSLine className="h-3.5 w-3.5 text-slate-500" />,
       }}
       {...props}
     />

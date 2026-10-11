@@ -34,17 +34,69 @@ export const BUILD_STATUS_LABELS: Record<string, string> = {
 /** Default credentials/records poll interval (ms). */
 export const RECORDS_POLL_INTERVAL_MS = 30000;
 
+export type ProjectDeploymentAccess = {
+  runtime_url?: string;
+  actual_status?: string;
+};
+
 export type ProjectAccessFields = {
   use_https?: boolean;
   port?: number | string;
   frontend_route?: string;
+  /** When the project is on Agents, prefer a deployment runtime_url over host:port. */
+  deployments?: ProjectDeploymentAccess[];
 };
+
+function pickAgentRuntimeUrl(
+  deployments: ProjectDeploymentAccess[] | undefined,
+): string {
+  if (!deployments?.length) return "";
+  const trimmed = (d: ProjectDeploymentAccess) =>
+    (d.runtime_url || "").trim().replace(/\/+$/, "");
+  const running = deployments.find(
+    (d) => trimmed(d) && (d.actual_status || "").toLowerCase() === "running",
+  );
+  if (running) return trimmed(running);
+  const any = deployments.find((d) => trimmed(d));
+  return any ? trimmed(any) : "";
+}
+
+export type ProjectRuntimeStatusFields = {
+  container_status?: string;
+  deployments?: ProjectDeploymentAccess[];
+};
+
+/**
+ * Effective runtime status for list/detail badges.
+ * Agent-hosted projects keep container_status=stopped on the control plane;
+ * prefer deployment actual_status when deployments exist.
+ */
+export function getProjectRuntimeStatus(
+  project: ProjectRuntimeStatusFields = {},
+): string {
+  const deps = project.deployments || [];
+  if (deps.length > 0) {
+    const statuses = deps.map((d) => (d.actual_status || "").toLowerCase());
+    if (statuses.some((s) => s === "running")) return "running";
+    if (statuses.some((s) => s === "starting" || s === "pending")) {
+      return "starting";
+    }
+    if (statuses.some((s) => s === "stopping")) return "stopping";
+    return "stopped";
+  }
+  return (project.container_status || "stopped").toLowerCase();
+}
 
 /** Build the public access URL for a running project. */
 export function buildAccessUrl(
   project: ProjectAccessFields = {},
   hostname = "localhost",
 ): string {
+  const agentURL = pickAgentRuntimeUrl(project.deployments);
+  if (agentURL) {
+    return agentURL;
+  }
+
   const protocol = project.use_https ? "https:" : "http:";
   const port = project.port || 6000;
   const raw = project.frontend_route;

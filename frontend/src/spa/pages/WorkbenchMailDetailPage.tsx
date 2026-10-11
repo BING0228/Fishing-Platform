@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { RiArrowLeftLine } from "@remixicon/react";
 import { api } from "@/api";
 import { useI18n } from "@/i18n";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +21,7 @@ type MailCampaign = {
   open_count: number;
   click_count: number;
   recipient_count: number;
+  scheduled_at?: string;
   created_at: string;
 };
 
@@ -87,10 +88,23 @@ export default function WorkbenchMailDetailPage() {
   };
 
   const statusBadge = (status: string) => {
-    if (status === "sent") return <Badge variant="success">{status}</Badge>;
-    if (status === "partial") return <Badge variant="warning">{status}</Badge>;
-    if (status === "failed") return <Badge variant="danger">{status}</Badge>;
-    return <Badge variant="secondary">{status}</Badge>;
+    const label =
+      status === "scheduled"
+        ? t("workbench.campaignStatusScheduled")
+        : status === "sending"
+          ? t("workbench.campaignStatusSending")
+          : status === "sent"
+            ? t("workbench.campaignStatusSent")
+            : status === "partial"
+              ? t("workbench.campaignStatusPartial")
+              : status === "failed"
+                ? t("workbench.campaignStatusFailed")
+                : status;
+    if (status === "sent") return <Badge variant="success">{label}</Badge>;
+    if (status === "partial" || status === "scheduled")
+      return <Badge variant="warning">{label}</Badge>;
+    if (status === "failed") return <Badge variant="danger">{label}</Badge>;
+    return <Badge variant="secondary">{label}</Badge>;
   };
 
   const eventKindLabel = (kind: string) => {
@@ -128,7 +142,7 @@ export default function WorkbenchMailDetailPage() {
           to="/workbench/mail"
           className="mb-1 inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800"
         >
-          <ArrowLeft className="h-3.5 w-3.5" />
+          <RiArrowLeftLine className="h-3.5 w-3.5" />
           {t("workbench.campaigns")}
         </Link>
         <div className="flex flex-wrap items-center gap-2">
@@ -136,6 +150,11 @@ export default function WorkbenchMailDetailPage() {
           {statusBadge(campaign.status)}
         </div>
         <p className="mt-1 break-all text-sm text-slate-500">{campaign.landing_url}</p>
+        {campaign.scheduled_at ? (
+          <p className="mt-1 text-sm text-slate-500">
+            {t("workbench.scheduleAt")}: {formatTime(campaign.scheduled_at)}
+          </p>
+        ) : null}
       </div>
 
       {error ? (

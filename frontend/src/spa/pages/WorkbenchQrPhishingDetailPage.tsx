@@ -2,13 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Download } from "lucide-react";
+import {
+  RiArrowLeftLine,
+  RiDownloadLine,
+} from "@remixicon/react";
 import { api } from "@/api";
 import { getStoredToken } from "@/auth/auth-store";
 import { useI18n } from "@/i18n";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { QrScriptUsage } from "@/spa/components/QrScriptUsage";
 
 type QrRelay = {
   id: number;
@@ -363,7 +367,7 @@ export default function WorkbenchQrPhishingDetailPage() {
           to="/workbench/qr-phishing"
           className="mb-1 inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800"
         >
-          <ArrowLeft className="h-3.5 w-3.5" />
+          <RiArrowLeftLine className="h-3.5 w-3.5" />
           {t("workbench.qrBack")}
         </Link>
         <div className="flex flex-wrap items-center gap-2">
@@ -410,7 +414,7 @@ export default function WorkbenchQrPhishingDetailPage() {
           onClick={downloadScript}
           disabled={downloading}
         >
-          <Download className="h-4 w-4" />
+          <RiDownloadLine className="h-4 w-4" />
           {downloading
             ? t("workbench.qrDownloading")
             : t("workbench.qrDownloadScript")}
@@ -435,6 +439,8 @@ export default function WorkbenchQrPhishingDetailPage() {
           {t("workbench.qrDelete")}
         </Button>
       </div>
+
+      <QrScriptUsage />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>

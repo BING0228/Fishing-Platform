@@ -48,6 +48,13 @@ frontend-vue-superseded/
 # Duplicate / scratch docs
 README copy.md
 
+# Local product plans / design notes (keep in repo working tree, do not publish)
+docs/chat-console-plan.md
+docs/*-plan.md
+docs/*-product-design.md
+docs/*-experience.md
+README.assets/backup/
+
 # Dependencies and package-manager caches
 node_modules/
 frontend/node_modules/

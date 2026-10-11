@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -193,6 +194,27 @@ func EffectivePublicBaseURL() string {
 	return config.PublicBaseURL()
 }
 
+// requestPublicBaseURL is the http(s) origin to turn relative submit paths
+// into full URLs (DB/YAML public_base_url, else this request's host).
+func requestPublicBaseURL(c *gin.Context) string {
+	if base := EffectivePublicBaseURL(); base != "" {
+		return base
+	}
+	scheme := "http"
+	if c != nil && c.Request != nil {
+		if c.Request.TLS != nil {
+			scheme = "https"
+		}
+		if proto := c.GetHeader("X-Forwarded-Proto"); proto != "" {
+			scheme = strings.TrimSpace(strings.Split(proto, ",")[0])
+		}
+		if host := strings.TrimSpace(c.Request.Host); host != "" {
+			return scheme + "://" + host
+		}
+	}
+	return fmt.Sprintf("http://127.0.0.1:%d", config.ServerPort())
+}
+
 // EffectiveMailTrackingEnabled prefers DB.
 func EffectiveMailTrackingEnabled() bool {
 	if row := loadMailTrackingSetting(); row != nil {
@@ -241,7 +263,7 @@ func isReservedAPISlug(slug string) bool {
 		"credentials", "ip-blacklist", "smtp-services", "mail-campaigns",
 		"phishing-pages", "dashboard", "audit-logs", "ai-settings",
 		"mail-tracking-settings", "info-gather-jobs", "qr-relays", "qr-relay",
-		"robot_push_logs":
+		"mail-templates", "robot_push_logs":
 		return true
 	default:
 		return false

@@ -8,6 +8,7 @@ export function generateStaticParams() {
     { slug: ["login"] },
     { slug: ["workbench"] },
     { slug: ["workbench", "mail"] },
+    { slug: ["workbench", "mail-templates"] },
     { slug: ["workbench", "page-builder"] },
     { slug: ["workbench", "info-gathering"] },
     { slug: ["workbench", "qr-phishing"] },

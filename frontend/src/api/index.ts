@@ -231,6 +231,29 @@ export const api = {
   getMailCampaignEvents(id: number | string) {
     return apiClient.get(`/api/mail-campaigns/${id}/events/`);
   },
+  getMailTemplates() {
+    return apiClient.get("/api/mail-templates/");
+  },
+  getMailTemplate(id: number | string) {
+    return apiClient.get(`/api/mail-templates/${id}/`);
+  },
+  createMailTemplate(data: {
+    name: string;
+    subject: string;
+    body: string;
+    is_html?: boolean;
+  }) {
+    return apiClient.post("/api/mail-templates/", data);
+  },
+  updateMailTemplate(
+    id: number | string,
+    data: { name: string; subject: string; body: string; is_html?: boolean },
+  ) {
+    return apiClient.put(`/api/mail-templates/${id}/`, data);
+  },
+  deleteMailTemplate(id: number | string) {
+    return apiClient.delete(`/api/mail-templates/${id}/`);
+  },
   getInfoGatherJobs() {
     return apiClient.get("/api/info-gather-jobs/");
   },

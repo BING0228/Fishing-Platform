@@ -518,10 +518,11 @@ func (s SmtpService) ToPublic() SmtpServicePublic {
 type MailCampaignStatus string
 
 const (
-	MailCampaignStatusSending MailCampaignStatus = "sending"
-	MailCampaignStatusSent    MailCampaignStatus = "sent"
-	MailCampaignStatusPartial MailCampaignStatus = "partial"
-	MailCampaignStatusFailed  MailCampaignStatus = "failed"
+	MailCampaignStatusScheduled MailCampaignStatus = "scheduled"
+	MailCampaignStatusSending   MailCampaignStatus = "sending"
+	MailCampaignStatusSent      MailCampaignStatus = "sent"
+	MailCampaignStatusPartial   MailCampaignStatus = "partial"
+	MailCampaignStatusFailed    MailCampaignStatus = "failed"
 )
 
 type MailEventKind string
@@ -545,9 +546,12 @@ type MailCampaign struct {
 	TrackOpens     bool               `json:"track_opens" gorm:"default:false"`
 	TrackClicks    bool               `json:"track_clicks" gorm:"default:true"`
 	LandingURL     string             `json:"landing_url" gorm:"size:1000"`
+	PublicBaseURL  string             `json:"public_base_url" gorm:"size:500"`
 	ClickPath      string             `json:"click_path" gorm:"size:200;index"` // per-campaign opaque /api/... path
 	OpenPath       string             `json:"open_path" gorm:"size:200;index"`  // per-campaign opaque /api/... path
 	Status         MailCampaignStatus `json:"status" gorm:"size:20;default:'sending';index"`
+	ScheduledAt    *time.Time         `json:"scheduled_at" gorm:"index"`
+	TemplateID     *uint              `json:"template_id" gorm:"index"`
 	SentCount      int                `json:"sent_count" gorm:"default:0"`
 	FailedCount    int                `json:"failed_count" gorm:"default:0"`
 	OpenCount      int                `json:"open_count" gorm:"default:0"`
@@ -589,6 +593,18 @@ type MailEvent struct {
 	UserAgent   string        `json:"user_agent" gorm:"size:500"`
 	TargetURL   string        `json:"target_url" gorm:"size:1000"`
 	CreatedAt   time.Time     `json:"created_at" gorm:"index"`
+}
+
+// MailTemplate is a reusable subject/body for workbench campaigns.
+type MailTemplate struct {
+	ID        uint      `json:"id" gorm:"primaryKey"`
+	Name      string    `json:"name" gorm:"size:200;not null"`
+	Subject   string    `json:"subject" gorm:"size:500;not null"`
+	Body      string    `json:"body" gorm:"type:text;not null"`
+	IsHTML    bool      `json:"is_html" gorm:"default:true"`
+	CreatedBy uint      `json:"created_by" gorm:"index;not null;default:0"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 type UserRole string
@@ -687,7 +703,6 @@ type InfoGatherFinding struct {
 	Label      string    `json:"label" gorm:"size:255"`
 	SourceURL  string    `json:"source_url" gorm:"size:1000"`
 	Snippet    string    `json:"snippet" gorm:"type:text"`
-	Confidence string    `json:"confidence" gorm:"size:20;default:'medium'"`
 	CreatedAt  time.Time `json:"created_at"`
 }
 
@@ -782,6 +797,7 @@ func AutoMigrate(db *gorm.DB) error {
 		&MailCampaign{},
 		&MailRecipient{},
 		&MailEvent{},
+		&MailTemplate{},
 		&AuditLog{},
 		&AIProfile{},
 		&HostMetricSample{},
@@ -811,7 +827,7 @@ func AutoMigrate(db *gorm.DB) error {
 	if admin.ID == 0 {
 		return nil
 	}
-	for _, model := range []any{&Project{}, &Robot{}, &IPBlacklist{}, &SmtpService{}, &MailCampaign{}, &PhishingPage{}, &InfoGatherJob{}, &QrRelay{}} {
+	for _, model := range []any{&Project{}, &Robot{}, &IPBlacklist{}, &SmtpService{}, &MailCampaign{}, &MailTemplate{}, &PhishingPage{}, &InfoGatherJob{}, &QrRelay{}} {
 		if err := db.Model(model).Where("created_by = 0 OR created_by IS NULL").Update("created_by", admin.ID).Error; err != nil {
 			return err
 		}

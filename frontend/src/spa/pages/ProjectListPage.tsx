@@ -2,11 +2,14 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Plus } from "lucide-react";
+import { RiAddLine } from "@remixicon/react";
 import { api } from "@/api";
 import { isAdminRole, useAuthStore } from "@/auth/auth-store";
 import { useI18n } from "@/i18n";
-import { buildAccessUrl } from "@/utils/projectDetailHelpers";
+import {
+  buildAccessUrl,
+  getProjectRuntimeStatus,
+} from "@/utils/projectDetailHelpers";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,6 +45,7 @@ type Agent = {
   status?: string;
 };
 type QrRelayOption = { id: number; name: string; slug?: string; enabled?: boolean };
+type PageBuilderOption = { id: number; name: string; url?: string };
 
 export type ProjectRow = {
   id: number;
@@ -60,10 +64,15 @@ export type ProjectRow = {
   agent_ids?: number[];
   robots?: Robot[];
   qr_relay_id?: number | null;
+  deployments?: {
+    id?: number;
+    runtime_url?: string;
+    actual_status?: string;
+    runtime_port?: number;
+  }[];
 };
 
 const PLATFORM = "platform";
-const MAX_HTML = 30 * 1024 * 1024;
 const NAME_RE = /^[A-Za-z0-9-]+$/;
 
 function projectRunMode(record: ProjectRow) {
@@ -74,6 +83,14 @@ function isLocalProject(record: ProjectRow) {
   return (
     projectRunMode(record) === "local" ||
     String(record.container_id || "").startsWith("local:")
+  );
+}
+
+/** True when the project is (or will be) hosted on remote Agents. */
+function isAgentHosted(record: ProjectRow) {
+  if ((record.deployments || []).length > 0) return true;
+  return (record.agent_ids || []).some(
+    (id) => String(id) !== PLATFORM && Number(id) > 0,
   );
 }
 
@@ -108,6 +125,7 @@ type FormState = {
   robots: number[];
   agent_ids: (number | string)[];
   qr_relay_id: string;
+  phishing_page_id: string;
 };
 
 const emptyForm = (): FormState => ({
@@ -120,6 +138,7 @@ const emptyForm = (): FormState => ({
   robots: [],
   agent_ids: [PLATFORM],
   qr_relay_id: "",
+  phishing_page_id: "",
 });
 
 export default function ProjectListPage() {
@@ -129,6 +148,7 @@ export default function ProjectListPage() {
   const [robots, setRobots] = useState<Robot[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [qrRelays, setQrRelays] = useState<QrRelayOption[]>([]);
+  const [pageBuilderPages, setPageBuilderPages] = useState<PageBuilderOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ type: "ok" | "err" | "info"; text: string } | null>(null);
 
@@ -136,7 +156,6 @@ export default function ProjectListPage() {
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
-  const [htmlFile, setHtmlFile] = useState<File | null>(null);
   const [certFile, setCertFile] = useState<File | null>(null);
   const [keyFile, setKeyFile] = useState<File | null>(null);
   const [existingSSL, setExistingSSL] = useState(false);
@@ -195,12 +214,22 @@ export default function ProjectListPage() {
     }
   }, [showToast, t]);
 
+  const fetchPageBuilderPages = useCallback(async () => {
+    try {
+      const { data } = await api.getPhishingPages();
+      setPageBuilderPages(Array.isArray(data) ? (data as PageBuilderOption[]) : []);
+    } catch {
+      showToast("err", t("project.pageBuilderFetchFailed"));
+    }
+  }, [showToast, t]);
+
   useEffect(() => {
     fetchProjects();
     fetchRobots();
     fetchAgents();
     fetchQrRelays();
-  }, [fetchProjects, fetchRobots, fetchAgents, fetchQrRelays]);
+    fetchPageBuilderPages();
+  }, [fetchProjects, fetchRobots, fetchAgents, fetchQrRelays, fetchPageBuilderPages]);
 
   const accessUrl = (record: ProjectRow) =>
     buildAccessUrl(record, typeof window !== "undefined" ? window.location.hostname : "localhost");
@@ -209,7 +238,6 @@ export default function ProjectListPage() {
     setModalMode("create");
     setEditingId(null);
     setForm(emptyForm());
-    setHtmlFile(null);
     setCertFile(null);
     setKeyFile(null);
     setExistingSSL(false);
@@ -230,8 +258,8 @@ export default function ProjectListPage() {
       robots: record.robot_ids || [],
       agent_ids: record.agent_ids?.length ? record.agent_ids : [PLATFORM],
       qr_relay_id: record.qr_relay_id ? String(record.qr_relay_id) : "",
+      phishing_page_id: "",
     });
-    setHtmlFile(null);
     setCertFile(null);
     setKeyFile(null);
     setExistingSSL(!!record.has_ssl_cert);
@@ -262,7 +290,9 @@ export default function ProjectListPage() {
     if (!form.frontend_route.trim()) return t("project.frontendRouteRequired");
     if (!form.login_url.trim()) return t("project.originUrlRequired");
     if (!form.port) return t("project.servicePortRequired");
-    if (modalMode === "create" && !htmlFile) return t("project.uploadHtmlRequired");
+    if (modalMode === "create" && !form.phishing_page_id) {
+      return t("project.htmlPageRequired");
+    }
     if (!form.robots.length) return t("project.pushChannelsRequired");
     if (!form.agent_ids.length) return t("project.deployAgentsRequired");
     if (form.use_https) {
@@ -270,10 +300,6 @@ export default function ProjectListPage() {
       const hasBoth = !!certFile && !!keyFile;
       if (hasAny && !hasBoth) return t("project.sslNeedPair");
       if (!existingSSL && !hasBoth) return t("project.sslRequired");
-    }
-    if (htmlFile) {
-      if (!htmlFile.name.toLowerCase().endsWith(".html")) return t("common.htmlOnly");
-      if (htmlFile.size > MAX_HTML) return t("common.htmlSizeLimit");
     }
     return "";
   };
@@ -299,7 +325,9 @@ export default function ProjectListPage() {
       const agentIds = form.agent_ids.filter((id) => id !== PLATFORM);
       fd.append("agent_ids", JSON.stringify(agentIds));
       fd.append("qr_relay_id", form.qr_relay_id || "");
-      if (htmlFile) fd.append("html_file", htmlFile);
+      if (form.phishing_page_id) {
+        fd.append("phishing_page_id", form.phishing_page_id);
+      }
       if (form.use_https && certFile) fd.append("ssl_cert_file", certFile);
       if (form.use_https && keyFile) fd.append("ssl_key_file", keyFile);
 
@@ -321,7 +349,8 @@ export default function ProjectListPage() {
 
   const handleToggleStatus = async (record: ProjectRow) => {
     const mode = projectRunMode(record);
-    const isStopping = record.container_status === "running";
+    const runtimeStatus = getProjectRuntimeStatus(record);
+    const isStopping = runtimeStatus === "running";
 
     if (isStopping) {
       setStoppingId(record.id);
@@ -431,32 +460,61 @@ export default function ProjectListPage() {
   };
 
   const runActionText = (record: ProjectRow) => {
-    if (record.container_status === "running") return t("project.stop");
+    if (isAgentHosted(record)) return t("project.manageRuntime");
+    if (getProjectRuntimeStatus(record) === "running") return t("project.stop");
     return projectRunMode(record) === "local"
       ? t("project.startLocal")
       : t("project.startContainer");
   };
 
-  const runDisabled = (record: ProjectRow) =>
-    record.build_status === "building" ||
-    (record.container_status !== "running" &&
-      projectRunMode(record) === "docker" &&
-      !record.docker_image);
+  const runDisabled = (record: ProjectRow) => {
+    if (isAgentHosted(record)) return false;
+    const runtimeStatus = getProjectRuntimeStatus(record);
+    return (
+      record.build_status === "building" ||
+      (runtimeStatus !== "running" &&
+        projectRunMode(record) === "docker" &&
+        !record.docker_image)
+    );
+  };
 
   const statusBadge = (record: ProjectRow) => {
-    if (record.container_status === "stopping") {
+    const runtimeStatus = getProjectRuntimeStatus(record);
+    if (runtimeStatus === "stopping") {
       return <Badge variant="warning">{t("project.stopping")}</Badge>;
     }
-    if (record.container_status === "running") {
+    if (runtimeStatus === "starting") {
+      return <Badge variant="warning">{t("project.starting")}</Badge>;
+    }
+    if (runtimeStatus === "running") {
       return (
         <Badge variant="success">
-          {isLocalProject(record)
-            ? t("project.localRunning")
-            : t("project.containerRunning")}
+          {isAgentHosted(record)
+            ? t("project.agentRunning")
+            : isLocalProject(record)
+              ? t("project.localRunning")
+              : t("project.containerRunning")}
         </Badge>
       );
     }
     return <Badge variant="danger">{t("project.stopped")}</Badge>;
+  };
+
+  const runModeBadge = (record: ProjectRow) => {
+    if (isAgentHosted(record)) {
+      return <Badge variant="secondary">Agent</Badge>;
+    }
+    return (
+      <Badge
+        variant={
+          projectRunMode(record) === "local" ? "secondary" : "outline"
+        }
+      >
+        {projectRunMode(record) === "local"
+          ? t("project.localFlask")
+          : t("project.docker")}
+      </Badge>
+    );
   };
 
   const modalTitle = useMemo(
@@ -487,7 +545,7 @@ export default function ProjectListPage() {
           <p className="text-sm text-slate-500">{t("project.subtitle")}</p>
         </div>
         <Button onClick={openCreate}>
-          <Plus className="h-4 w-4" />
+          <RiAddLine className="h-4 w-4" />
           {t("project.newProject")}
         </Button>
       </div>
@@ -531,19 +589,7 @@ export default function ProjectListPage() {
                         {accessUrl(record)}
                       </a>
                     </td>
-                    <td className="px-4 py-3">
-                      <Badge
-                        variant={
-                          projectRunMode(record) === "local"
-                            ? "secondary"
-                            : "outline"
-                        }
-                      >
-                        {projectRunMode(record) === "local"
-                          ? t("project.localFlask")
-                          : t("project.docker")}
-                      </Badge>
-                    </td>
+                    <td className="px-4 py-3">{runModeBadge(record)}</td>
                     <td className="px-4 py-3">{statusBadge(record)}</td>
                     <td className="px-4 py-3">
                       {startingId === record.id ? (
@@ -552,15 +598,30 @@ export default function ProjectListPage() {
                         <span className="text-slate-500">{t("project.stopping")}</span>
                       ) : (
                         <div className="flex flex-wrap gap-1">
-                          <Button
-                            variant="link"
-                            size="sm"
-                            className="h-auto px-1"
-                            disabled={runDisabled(record) || anyTask}
-                            onClick={() => handleToggleStatus(record)}
-                          >
-                            {runActionText(record)}
-                          </Button>
+                          {isAgentHosted(record) ? (
+                            <Button
+                              variant="link"
+                              size="sm"
+                              className="h-auto px-1"
+                              asChild
+                            >
+                              <Link
+                                to={`/projects/${record.id}/deployments`}
+                              >
+                                {runActionText(record)}
+                              </Link>
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="link"
+                              size="sm"
+                              className="h-auto px-1"
+                              disabled={runDisabled(record) || anyTask}
+                              onClick={() => handleToggleStatus(record)}
+                            >
+                              {runActionText(record)}
+                            </Button>
+                          )}
                           <Button
                             variant="link"
                             size="sm"
@@ -733,22 +794,54 @@ export default function ProjectListPage() {
                 </p>
               </div>
 
-              <Label className="flex h-9 items-center justify-end whitespace-nowrap text-right text-sm leading-none">
-                {t("project.htmlPage")}
+              <Label
+                htmlFor="phishing_page_id"
+                className="flex h-9 items-center justify-end whitespace-nowrap text-right text-sm leading-none"
+              >
+                {t("project.pageBuilderPage")}
               </Label>
               <div className="space-y-1">
-                <FileUpload
-                  id="html_file"
-                  accept=".html"
-                  value={htmlFile}
-                  onChange={setHtmlFile}
-                  buttonLabel={t("project.uploadHtml")}
-                  emptyHint={
-                    modalMode === "edit" ? t("project.keepCurrentHtml") : undefined
-                  }
-                />
+                <select
+                  id="phishing_page_id"
+                  className="flex h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                  value={form.phishing_page_id}
+                  onChange={(e) => {
+                    const phishing_page_id = e.target.value;
+                    const page = pageBuilderPages.find(
+                      (item) => String(item.id) === phishing_page_id,
+                    );
+                    setForm({
+                      ...form,
+                      phishing_page_id,
+                      login_url: page?.url?.trim() || form.login_url,
+                    });
+                  }}
+                >
+                  <option value="">
+                    {modalMode === "edit"
+                      ? t("project.pageBuilderKeepCurrent")
+                      : t("project.pageBuilderSelect")}
+                  </option>
+                  {pageBuilderPages.map((page) => (
+                    <option key={page.id} value={String(page.id)}>
+                      {page.name}
+                    </option>
+                  ))}
+                </select>
                 <p className="text-xs text-slate-500">
-                  {t("project.uploadHtmlTip")}
+                  {pageBuilderPages.length === 0 ? (
+                    <>
+                      {t("project.pageBuilderEmpty")}{" "}
+                      <Link
+                        to="/workbench/page-builder"
+                        className="underline underline-offset-2"
+                      >
+                        {t("nav.pageBuilder")}
+                      </Link>
+                    </>
+                  ) : (
+                    t("project.pageBuilderHint")
+                  )}
                 </p>
               </div>
 

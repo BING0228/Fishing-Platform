@@ -123,11 +123,16 @@ func normalizeSmtpPayload(payload smtpServicePayload, creating bool) (models.Smt
 		enabled = *payload.Enabled
 	}
 
+	username := strings.TrimSpace(payload.Username)
+	if username == "" {
+		username = fromEmail
+	}
+
 	return models.SmtpService{
 		Name:        name,
 		Host:        host,
 		Port:        port,
-		Username:    strings.TrimSpace(payload.Username),
+		Username:    username,
 		Password:    payload.Password,
 		FromEmail:   fromEmail,
 		FromName:    strings.TrimSpace(payload.FromName),

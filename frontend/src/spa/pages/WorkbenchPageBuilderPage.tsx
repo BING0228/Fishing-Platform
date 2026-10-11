@@ -10,16 +10,16 @@ import {
   useState,
 } from "react";
 import {
-  Check,
-  Circle,
-  Download,
-  FileCode2,
-  LayoutTemplate,
-  Loader2,
-  Trash2,
-  Upload,
-  X,
-} from "lucide-react";
+  RiCheckLine,
+  RiCircleLine,
+  RiCloseLine,
+  RiDeleteBinLine,
+  RiDownloadLine,
+  RiFileCodeLine,
+  RiLayout4Line,
+  RiLoader4Line,
+  RiUploadLine,
+} from "@remixicon/react";
 import { api } from "@/api";
 import { getStoredToken } from "@/auth/auth-store";
 import { useI18n } from "@/i18n";
@@ -184,6 +184,9 @@ function safeHtmlFilename(name: string, id: number) {
   return `${base || `page-${id}`}.html`;
 }
 
+const LANDING_SUBMIT_PLACEHOLDER = "{{SUBMIT_URL}}";
+const LANDING_REDIRECT_PLACEHOLDER = "{{REDIRECT_URL}}";
+
 function triggerHtmlDownload(filename: string, html: string) {
   const blob = new Blob([html], { type: "text/html;charset=utf-8" });
   const href = URL.createObjectURL(blob);
@@ -264,7 +267,7 @@ function PageThumb({
         className="flex w-full items-center justify-center bg-slate-100 text-slate-400"
         style={frameStyle}
       >
-        <FileCode2 className="h-8 w-8" />
+        <RiFileCodeLine className="h-8 w-8" />
       </div>
     );
   }
@@ -333,8 +336,8 @@ export default function WorkbenchPageBuilderPage() {
   const [mirrorForm, setMirrorForm] = useState({
     url: "",
     name: "",
-    submit_url: "/api/submit",
-    redirect_url: "",
+    submit_url: LANDING_SUBMIT_PLACEHOLDER,
+    redirect_url: LANDING_REDIRECT_PLACEHOLDER,
   });
 
   const resetMirrorProgress = useCallback(() => {
@@ -395,8 +398,8 @@ export default function WorkbenchPageBuilderPage() {
   const [uploadForm, setUploadForm] = useState({
     name: "",
     description: "",
-    submit_url: "/api/submit",
-    redirect_url: "",
+    submit_url: LANDING_SUBMIT_PLACEHOLDER,
+    redirect_url: LANDING_REDIRECT_PLACEHOLDER,
   });
 
   const resetUploadProgress = useCallback(() => {
@@ -519,8 +522,8 @@ export default function WorkbenchPageBuilderPage() {
     setUploadForm({
       name: "",
       description: "",
-      submit_url: "/api/submit",
-      redirect_url: "",
+      submit_url: LANDING_SUBMIT_PLACEHOLDER,
+      redirect_url: LANDING_REDIRECT_PLACEHOLDER,
     });
   };
 
@@ -594,8 +597,8 @@ export default function WorkbenchPageBuilderPage() {
         setUploadForm({
           name: "",
           description: "",
-          submit_url: "/api/submit",
-          redirect_url: "",
+          submit_url: LANDING_SUBMIT_PLACEHOLDER,
+          redirect_url: LANDING_REDIRECT_PLACEHOLDER,
         });
         fetchPages();
         return;
@@ -618,7 +621,7 @@ export default function WorkbenchPageBuilderPage() {
           name,
           html,
           description: uploadForm.description.trim() || undefined,
-          submit_url: uploadForm.submit_url.trim() || "/api/submit",
+          submit_url: uploadForm.submit_url.trim() || LANDING_SUBMIT_PLACEHOLDER,
           redirect_url: uploadForm.redirect_url.trim() || undefined,
         }),
         signal: ctrl.signal,
@@ -678,8 +681,8 @@ export default function WorkbenchPageBuilderPage() {
               setUploadForm({
                 name: "",
                 description: "",
-                submit_url: "/api/submit",
-                redirect_url: "",
+                submit_url: LANDING_SUBMIT_PLACEHOLDER,
+                redirect_url: LANDING_REDIRECT_PLACEHOLDER,
               });
               fetchPages();
             }, 600);
@@ -724,6 +727,20 @@ export default function WorkbenchPageBuilderPage() {
     mirrorAbortRef.current = null;
   };
 
+  const openMirror = () => {
+    mirrorAbortRef.current?.abort();
+    mirrorAbortRef.current = null;
+    setMirrorOpen(true);
+    setMirroring(false);
+    resetMirrorProgress();
+    setMirrorForm({
+      url: "",
+      name: "",
+      submit_url: LANDING_SUBMIT_PLACEHOLDER,
+      redirect_url: LANDING_REDIRECT_PLACEHOLDER,
+    });
+  };
+
   const onMirror = async (e: FormEvent) => {
     e.preventDefault();
     const url = mirrorForm.url.trim();
@@ -753,7 +770,7 @@ export default function WorkbenchPageBuilderPage() {
         body: JSON.stringify({
           url,
           name: mirrorForm.name.trim() || undefined,
-          submit_url: mirrorForm.submit_url.trim() || "/api/submit",
+          submit_url: mirrorForm.submit_url.trim() || LANDING_SUBMIT_PLACEHOLDER,
           redirect_url: mirrorForm.redirect_url.trim() || undefined,
         }),
         signal: ctrl.signal,
@@ -808,8 +825,8 @@ export default function WorkbenchPageBuilderPage() {
               setMirrorForm({
                 url: "",
                 name: "",
-                submit_url: "/api/submit",
-                redirect_url: "",
+                submit_url: LANDING_SUBMIT_PLACEHOLDER,
+                redirect_url: LANDING_REDIRECT_PLACEHOLDER,
               });
               fetchPages();
             }, 600);
@@ -847,7 +864,7 @@ export default function WorkbenchPageBuilderPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="flex items-center gap-2 text-xl font-semibold">
-            <LayoutTemplate className="h-5 w-5" />
+            <RiLayout4Line className="h-5 w-5" />
             {t("nav.pageBuilder")}
           </h1>
           <p className="text-sm text-slate-500">{t("pageBuilder.subtitle")}</p>
@@ -855,10 +872,10 @@ export default function WorkbenchPageBuilderPage() {
         <div className="flex flex-wrap gap-2">
           <RefreshButton onClick={fetchPages} loading={loading} />
           <Button variant="outline" onClick={openUpload}>
-            <Upload className="h-4 w-4" />
+            <RiUploadLine className="h-4 w-4" />
             {t("pageBuilder.uploadHtml")}
           </Button>
-          <Button onClick={() => setMirrorOpen(true)}>
+          <Button onClick={openMirror}>
             {t("pageBuilder.mirrorFromUrl")}
           </Button>
         </div>
@@ -917,7 +934,7 @@ export default function WorkbenchPageBuilderPage() {
                       aria-label={t("pageBuilder.downloadHtml")}
                       title={t("pageBuilder.downloadHtml")}
                     >
-                      <Download className="h-4 w-4" />
+                      <RiDownloadLine className="h-4 w-4" />
                     </Button>
                     <Button
                       type="button"
@@ -928,7 +945,7 @@ export default function WorkbenchPageBuilderPage() {
                       aria-label={t("pageBuilder.deleteHtml")}
                       title={t("pageBuilder.deleteHtml")}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <RiDeleteBinLine className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
@@ -1063,7 +1080,7 @@ export default function WorkbenchPageBuilderPage() {
                         submit_url: e.target.value,
                       }))
                     }
-                    placeholder="/api/submit"
+                    placeholder={t("pageBuilder.submitUrlPlaceholder")}
                     disabled={uploading || uploadDone}
                   />
                   <p className="text-xs text-slate-500">
@@ -1126,13 +1143,13 @@ export default function WorkbenchPageBuilderPage() {
                       >
                         <span className="mt-0.5 shrink-0">
                           {status === "done" ? (
-                            <Check className="h-4 w-4 text-emerald-600" />
+                            <RiCheckLine className="h-4 w-4 text-emerald-600" />
                           ) : status === "active" ? (
-                            <Loader2 className="h-4 w-4 animate-spin text-cyan-600" />
+                            <RiLoader4Line className="h-4 w-4 animate-spin text-cyan-600" />
                           ) : status === "failed" ? (
-                            <X className="h-4 w-4 text-red-600" />
+                            <RiCloseLine className="h-4 w-4 text-red-600" />
                           ) : (
-                            <Circle className="h-4 w-4 text-slate-300" />
+                            <RiCircleLine className="h-4 w-4 text-slate-300" />
                           )}
                         </span>
                         <span
@@ -1243,7 +1260,7 @@ export default function WorkbenchPageBuilderPage() {
                     submit_url: e.target.value,
                   }))
                 }
-                placeholder="/api/submit"
+                placeholder={t("pageBuilder.submitUrlPlaceholder")}
                 disabled={mirroring || mirrorDone}
               />
               <p className="text-xs text-slate-500">
@@ -1300,13 +1317,13 @@ export default function WorkbenchPageBuilderPage() {
                       >
                         <span className="mt-0.5 shrink-0">
                           {status === "done" ? (
-                            <Check className="h-4 w-4 text-emerald-600" />
+                            <RiCheckLine className="h-4 w-4 text-emerald-600" />
                           ) : status === "active" ? (
-                            <Loader2 className="h-4 w-4 animate-spin text-cyan-600" />
+                            <RiLoader4Line className="h-4 w-4 animate-spin text-cyan-600" />
                           ) : status === "failed" ? (
-                            <X className="h-4 w-4 text-red-600" />
+                            <RiCloseLine className="h-4 w-4 text-red-600" />
                           ) : (
-                            <Circle className="h-4 w-4 text-slate-300" />
+                            <RiCircleLine className="h-4 w-4 text-slate-300" />
                           )}
                         </span>
                         <span

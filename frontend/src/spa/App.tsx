@@ -130,6 +130,10 @@ export default function SpaApp() {
           <Route path="/workbench" element={<Navigate to="/workbench/mail" replace />} />
           <Route path="/workbench/mail" element={<WorkbenchMailPage />} />
           <Route path="/workbench/mail/:id" element={<WorkbenchMailDetailPage />} />
+          <Route
+            path="/workbench/mail-templates"
+            element={<Navigate to="/workbench/mail" replace />}
+          />
           <Route path="/workbench/page-builder" element={<WorkbenchPageBuilderPage />} />
           <Route path="/workbench/info-gathering" element={<WorkbenchInfoGatheringPage />} />
           <Route

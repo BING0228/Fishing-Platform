@@ -23,8 +23,8 @@ import (
 const agentTaskLeaseDuration = 60 * time.Second
 
 const (
-	agentProjectPortStart uint = 10000
-	agentProjectPortEnd   uint = 20000
+	agentProjectPortStart uint = 20000
+	agentProjectPortEnd   uint = 30000
 )
 
 type deploymentResponse struct {

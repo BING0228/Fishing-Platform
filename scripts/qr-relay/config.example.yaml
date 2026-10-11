@@ -1,23 +1,24 @@
-# Fishing Platform — local QR screen relay
+# 钓鱼台 — 本机 QR 截屏中继 / Fishing Platform — local QR screen relay
+# 中文用法见 README.zh.md
 platform_url: "http://127.0.0.1:8000"
 upload_token: "paste-upload-token-from-console"
 
-# Capture interval in milliseconds
+# 截屏间隔（毫秒）
 interval_ms: 500
 
-# Heartbeat when no new QR is uploaded (keeps console health "online")
+# 画面中没有新二维码时发心跳，控制台健康状态保持「在线」
 heartbeat_interval_ms: 3000
 
-# Optional screen region (pixels). Omit for full primary monitor.
-# Or run: python qr_relay.py --pick-region -c config.yaml
+# 可选截屏区域（像素）。注释掉则抓主显示器全屏。
+# 或运行：python qr_relay.py --pick-region -c config.yaml
 # region:
 #   left: 100
 #   top: 100
 #   width: 400
 #   height: 400
 
-# Skip upload when decoded payload / image hash unchanged
+# 解码内容 / 图片哈希未变时跳过上传
 dedupe: true
 
-# Verify TLS when platform_url is https
+# platform_url 为 https 时校验 TLS
 verify_tls: true

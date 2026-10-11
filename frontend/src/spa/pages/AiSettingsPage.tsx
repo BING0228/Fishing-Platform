@@ -1,7 +1,10 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
-import { BrainCircuit, Plus } from "lucide-react";
+import {
+  RiAddLine,
+  RiBrainAi3Line,
+} from "@remixicon/react";
 import { api } from "@/api";
 import { useI18n } from "@/i18n";
 import { Badge } from "@/components/ui/badge";
@@ -400,7 +403,7 @@ export default function AiSettingsPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="flex items-center gap-2 text-xl font-semibold">
-            <BrainCircuit className="h-5 w-5" />
+            <RiBrainAi3Line className="h-5 w-5" />
             {t("nav.aiSettings")}
           </h1>
           <p className="text-sm text-slate-500">{t("aiSettings.subtitle")}</p>
@@ -408,7 +411,7 @@ export default function AiSettingsPage() {
         <div className="flex gap-2">
           <RefreshButton onClick={load} loading={loading || saving} />
           <Button onClick={openCreate}>
-            <Plus className="h-4 w-4" />
+            <RiAddLine className="h-4 w-4" />
             {t("aiSettings.addProfile")}
           </Button>
         </div>

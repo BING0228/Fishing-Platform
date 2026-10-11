@@ -1,12 +1,15 @@
 package handlers
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"net/mail"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"fishing-platform-backend/config"
@@ -16,9 +19,14 @@ import (
 	"gorm.io/gorm"
 )
 
+var sendCampaignMailFn = utils.SendSMTPMail
+
+var dueMailMu sync.Mutex
+
 type mailCampaignCreatePayload struct {
 	SmtpServiceID uint        `json:"smtp_service_id"`
 	ProjectID     *uint       `json:"project_id"`
+	TemplateID    *uint       `json:"template_id"`
 	LandingURL    string      `json:"landing_url"`
 	Subject       string      `json:"subject"`
 	Body          string      `json:"body"`
@@ -26,25 +34,11 @@ type mailCampaignCreatePayload struct {
 	TrackOpens    *bool       `json:"track_opens"`
 	TrackClicks   *bool       `json:"track_clicks"`
 	Recipients    interface{} `json:"recipients"`
+	ScheduledAt   *time.Time  `json:"scheduled_at"`
 }
 
 func resolveMailPublicBase(c *gin.Context) string {
-	base := EffectivePublicBaseURL()
-	if base != "" {
-		return base
-	}
-	scheme := "http"
-	if c.Request.TLS != nil {
-		scheme = "https"
-	}
-	if proto := c.GetHeader("X-Forwarded-Proto"); proto != "" {
-		scheme = strings.TrimSpace(strings.Split(proto, ",")[0])
-	}
-	host := c.Request.Host
-	if host == "" {
-		host = fmt.Sprintf("127.0.0.1:%d", config.ServerPort())
-	}
-	return scheme + "://" + host
+	return requestPublicBaseURL(c)
 }
 
 func parseRecipientEmails(value interface{}) ([]string, error) {
@@ -161,6 +155,17 @@ func CreateMailCampaign(c *gin.Context) {
 		}
 	}
 
+	var templateID *uint
+	if payload.TemplateID != nil && *payload.TemplateID != 0 {
+		var tpl models.MailTemplate
+		if err := scopeByOwner(db, user).First(&tpl, *payload.TemplateID).Error; err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Mail template not found"})
+			return
+		}
+		id := tpl.ID
+		templateID = &id
+	}
+
 	landingURL, err := resolveCampaignLandingURL(db, payload.ProjectID, payload.LandingURL)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -182,24 +187,29 @@ func CreateMailCampaign(c *gin.Context) {
 	campaign := models.MailCampaign{
 		SmtpServiceID:  payload.SmtpServiceID,
 		ProjectID:      payload.ProjectID,
+		TemplateID:     templateID,
 		Subject:        subject,
 		BodyTemplate:   body,
 		IsHTML:         payload.IsHTML,
 		TrackOpens:     trackOpens,
 		TrackClicks:    trackClicks,
 		LandingURL:     landingURL,
+		PublicBaseURL:  resolveMailPublicBase(c),
 		Status:         models.MailCampaignStatusSending,
 		RecipientCount: len(recipients),
 		CreatedBy:      user.ID,
+	}
+	sendNow, scheduledAt := resolveCampaignSchedule(payload.ScheduledAt, time.Now())
+	campaign.ScheduledAt = scheduledAt
+	if !sendNow {
+		campaign.Status = models.MailCampaignStatusScheduled
 	}
 	if err := db.Create(&campaign).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create campaign"})
 		return
 	}
 
-	publicBase := resolveMailPublicBase(c)
 	secret := EffectiveMailTrackingSecret()
-	// Per-campaign opaque tracking paths (like sample /api/xxxx).
 	campaign.ClickPath = config.DeriveMailTrackingAPIPath(secret, fmt.Sprintf("click|%d", campaign.ID))
 	campaign.OpenPath = config.DeriveMailTrackingAPIPath(secret, fmt.Sprintf("open|%d", campaign.ID))
 	if campaign.ClickPath == campaign.OpenPath {
@@ -210,95 +220,16 @@ func CreateMailCampaign(c *gin.Context) {
 		"open_path":  campaign.OpenPath,
 	}).Error
 
-	smtpCfg := smtpConfigFromModel(smtpService)
-
-	sent := 0
-	failed := 0
 	for _, email := range recipients {
-		recipient := models.MailRecipient{
+		_ = db.Create(&models.MailRecipient{
 			CampaignID: campaign.ID,
 			Email:      strings.ToLower(email),
-		}
-		if err := db.Create(&recipient).Error; err != nil {
-			failed++
-			continue
-		}
-
-		sig := utils.MailTrackingSign(secret, campaign.ID, recipient.Email)
-		v := utils.BuildMailTrackingV(secret, campaign.ID, recipient.Email)
-		landingWithV := utils.AppendMailTrackingV(landingURL, v)
-		vars := map[string]string{
-			"email":       recipient.Email,
-			"sig":         sig,
-			"v":           v,
-			"landing_url": landingWithV,
-			"click_url":   landingWithV,
-			"open_pixel":  "",
-		}
-		if trackClicks {
-			vars["click_url"] = utils.BuildMailClickURL(
-				publicBase,
-				campaign.ClickPath,
-				secret,
-				campaign.ID,
-				recipient.Email,
-				landingURL,
-			)
-		}
-		if trackOpens {
-			vars["open_pixel"] = utils.BuildMailOpenPixelURL(
-				publicBase,
-				campaign.OpenPath,
-				secret,
-				campaign.ID,
-				recipient.Email,
-			)
-		}
-		rendered := utils.RenderMailTemplate(body, vars, payload.IsHTML, trackOpens)
-
-		sendErr := utils.SendSMTPMail(smtpCfg, utils.SmtpMessage{
-			To:      []string{recipient.Email},
-			Subject: subject,
-			Body:    rendered,
-			HTML:    payload.IsHTML,
-		})
-		now := time.Now()
-		if sendErr != nil {
-			failed++
-			_ = db.Model(&recipient).Updates(map[string]interface{}{
-				"last_error": sendErr.Error(),
-			}).Error
-			_ = db.Create(&models.MailEvent{
-				CampaignID:  campaign.ID,
-				RecipientID: recipient.ID,
-				Kind:        models.MailEventError,
-				TargetURL:   sendErr.Error(),
-			}).Error
-			continue
-		}
-		sent++
-		_ = db.Model(&recipient).Updates(map[string]interface{}{
-			"sent_at":    &now,
-			"last_error": "",
-		}).Error
-		_ = db.Create(&models.MailEvent{
-			CampaignID:  campaign.ID,
-			RecipientID: recipient.ID,
-			Kind:        models.MailEventSent,
 		}).Error
 	}
 
-	status := models.MailCampaignStatusSent
-	if sent == 0 {
-		status = models.MailCampaignStatusFailed
-	} else if failed > 0 {
-		status = models.MailCampaignStatusPartial
+	if sendNow {
+		deliverMailCampaign(campaign.ID)
 	}
-	_ = db.Model(&campaign).Updates(map[string]interface{}{
-		"sent_count":   sent,
-		"failed_count": failed,
-		"status":       status,
-	}).Error
 
 	var out models.MailCampaign
 	_ = db.First(&out, campaign.ID)
@@ -436,4 +367,173 @@ func GetMailCampaignEvents(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, items)
+}
+
+func resolveCampaignSchedule(raw *time.Time, now time.Time) (sendNow bool, scheduledAt *time.Time) {
+	if raw == nil {
+		return true, nil
+	}
+	when := raw.UTC()
+	if !when.After(now.Add(15 * time.Second)) {
+		return true, nil
+	}
+	return false, &when
+}
+
+func deliverMailCampaign(campaignID uint) {
+	db := config.GetDB()
+	var campaign models.MailCampaign
+	if err := db.First(&campaign, campaignID).Error; err != nil {
+		return
+	}
+	var smtpService models.SmtpService
+	if err := db.First(&smtpService, campaign.SmtpServiceID).Error; err != nil || !smtpService.Enabled {
+		_ = db.Model(&campaign).Update("status", models.MailCampaignStatusFailed).Error
+		return
+	}
+
+	publicBase := strings.TrimRight(strings.TrimSpace(campaign.PublicBaseURL), "/")
+	if publicBase == "" {
+		publicBase = EffectivePublicBaseURL()
+	}
+	secret := EffectiveMailTrackingSecret()
+	smtpCfg := smtpConfigFromModel(smtpService)
+
+	var recipients []models.MailRecipient
+	if err := db.Where("campaign_id = ?", campaign.ID).Order("id ASC").Find(&recipients).Error; err != nil {
+		return
+	}
+
+	sent := campaign.SentCount
+	failed := campaign.FailedCount
+	for i := range recipients {
+		recipient := &recipients[i]
+		if recipient.SentAt != nil {
+			continue
+		}
+		sig := utils.MailTrackingSign(secret, campaign.ID, recipient.Email)
+		v := utils.BuildMailTrackingV(secret, campaign.ID, recipient.Email)
+		landingWithV := utils.AppendMailTrackingV(campaign.LandingURL, v)
+		vars := map[string]string{
+			"email":       recipient.Email,
+			"sig":         sig,
+			"v":           v,
+			"landing_url": landingWithV,
+			"click_url":   landingWithV,
+			"open_pixel":  "",
+		}
+		if campaign.TrackClicks {
+			vars["click_url"] = utils.BuildMailClickURL(
+				publicBase,
+				campaign.ClickPath,
+				secret,
+				campaign.ID,
+				recipient.Email,
+				campaign.LandingURL,
+			)
+		}
+		if campaign.TrackOpens {
+			vars["open_pixel"] = utils.BuildMailOpenPixelURL(
+				publicBase,
+				campaign.OpenPath,
+				secret,
+				campaign.ID,
+				recipient.Email,
+			)
+		}
+		rendered := utils.RenderMailTemplate(campaign.BodyTemplate, vars, campaign.IsHTML, campaign.TrackOpens)
+		sendErr := sendCampaignMailFn(smtpCfg, utils.SmtpMessage{
+			To:      []string{recipient.Email},
+			Subject: campaign.Subject,
+			Body:    rendered,
+			HTML:    campaign.IsHTML,
+		})
+		now := time.Now()
+		if sendErr != nil {
+			failed++
+			_ = db.Model(recipient).Updates(map[string]interface{}{
+				"last_error": sendErr.Error(),
+			}).Error
+			_ = db.Create(&models.MailEvent{
+				CampaignID:  campaign.ID,
+				RecipientID: recipient.ID,
+				Kind:        models.MailEventError,
+				TargetURL:   sendErr.Error(),
+			}).Error
+			continue
+		}
+		sent++
+		_ = db.Model(recipient).Updates(map[string]interface{}{
+			"sent_at":    &now,
+			"last_error": "",
+		}).Error
+		_ = db.Create(&models.MailEvent{
+			CampaignID:  campaign.ID,
+			RecipientID: recipient.ID,
+			Kind:        models.MailEventSent,
+		}).Error
+	}
+
+	status := models.MailCampaignStatusSent
+	if sent == 0 {
+		status = models.MailCampaignStatusFailed
+	} else if failed > 0 {
+		status = models.MailCampaignStatusPartial
+	}
+	_ = db.Model(&campaign).Updates(map[string]interface{}{
+		"sent_count":   sent,
+		"failed_count": failed,
+		"status":       status,
+	}).Error
+}
+
+// StartMailCampaignScheduler sends due scheduled campaigns in the background.
+func StartMailCampaignScheduler(ctx context.Context) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	go func() {
+		ProcessDueMailCampaigns()
+		tick := time.NewTicker(15 * time.Second)
+		defer tick.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-tick.C:
+				ProcessDueMailCampaigns()
+			}
+		}
+	}()
+}
+
+// ProcessDueMailCampaigns claims scheduled campaigns whose time has arrived.
+func ProcessDueMailCampaigns() {
+	if !dueMailMu.TryLock() {
+		return
+	}
+	defer dueMailMu.Unlock()
+
+	db := config.GetDB()
+	if db == nil {
+		return
+	}
+	now := time.Now().UTC()
+	var due []models.MailCampaign
+	if err := db.Where("status = ? AND scheduled_at IS NOT NULL AND scheduled_at <= ?", models.MailCampaignStatusScheduled, now).
+		Order("scheduled_at ASC").
+		Limit(20).
+		Find(&due).Error; err != nil {
+		log.Printf("mail scheduler list: %v", err)
+		return
+	}
+	for i := range due {
+		res := db.Model(&models.MailCampaign{}).
+			Where("id = ? AND status = ?", due[i].ID, models.MailCampaignStatusScheduled).
+			Update("status", models.MailCampaignStatusSending)
+		if res.Error != nil || res.RowsAffected != 1 {
+			continue
+		}
+		deliverMailCampaign(due[i].ID)
+	}
 }

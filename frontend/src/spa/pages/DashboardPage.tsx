@@ -1,7 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FolderKanban, Mail, MessageSquare, PlayCircle, Network } from "lucide-react";
+import {
+  RiChat1Line,
+  RiKanbanView2,
+  RiMailLine,
+  RiNodeTree,
+  RiPlayCircleLine,
+} from "@remixicon/react";
 import {
   CartesianGrid,
   Line,
@@ -363,14 +369,14 @@ export default function DashboardPage() {
             </CardTitle>
             <CardAction>
               <Badge variant="outline" className="gap-1">
-                <FolderKanban className="h-3.5 w-3.5" />
+                <RiKanbanView2 className="h-3.5 w-3.5" />
                 {ratioPercent(stats.runningProjectCount, stats.projectCount)}%
               </Badge>
             </CardAction>
           </CardHeader>
           <CardFooter className="flex-col items-start gap-1.5 border-0 p-6 pt-0 text-sm">
             <div className="line-clamp-1 flex gap-2 font-medium">
-              <PlayCircle className="h-4 w-4 text-emerald-600" />
+              <RiPlayCircleLine className="h-4 w-4 text-emerald-600" />
               {t("dashboard.projectSummarySubtext", {
                 running: stats.runningProjectCount,
                 total: stats.projectCount,
@@ -395,7 +401,7 @@ export default function DashboardPage() {
             </CardTitle>
             <CardAction>
               <Badge variant="outline" className="gap-1">
-                <Mail className="h-3.5 w-3.5" />
+                <RiMailLine className="h-3.5 w-3.5" />
                 Mail
               </Badge>
             </CardAction>
@@ -415,7 +421,7 @@ export default function DashboardPage() {
             </CardTitle>
             <CardAction>
               <Badge variant="outline" className="gap-1">
-                <MessageSquare className="h-3.5 w-3.5" />
+                <RiChat1Line className="h-3.5 w-3.5" />
                 Msg
               </Badge>
             </CardAction>
@@ -437,7 +443,7 @@ export default function DashboardPage() {
             </CardTitle>
             <CardAction>
               <Badge variant="outline" className="gap-1">
-                <Network className="h-3.5 w-3.5" />
+                <RiNodeTree className="h-3.5 w-3.5" />
                 {ratioPercent(stats.onlineAgentCount, stats.agentCount)}%
               </Badge>
             </CardAction>

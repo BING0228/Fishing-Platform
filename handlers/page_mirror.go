@@ -104,16 +104,24 @@ func MirrorPhishingPage(c *gin.Context) {
 		})
 	}
 
-	submitURL := strings.TrimSpace(req.SubmitURL)
-	if submitURL == "" {
-		submitURL = utils.DefaultMirrorSubmitURL
-	}
-	redirectURL := strings.TrimSpace(req.RedirectURL)
+	submitURL := utils.LandingSubmitToken(req.SubmitURL)
+	redirectURL := utils.LandingRedirectToken(req.RedirectURL)
 
-	timeout := time.Duration(profile.TimeoutSec) * time.Second
-	if timeout <= 0 {
-		timeout = 120 * time.Second
+	if !emit(mirrorProgressEvent{Stage: "fetching", Percent: 20, Message: "Fetching target page"}) {
+		return
 	}
+	rawHTML, finalURL, err := utils.FetchURLHTML(c.Request.Context(), req.URL, 30*time.Second)
+	if err != nil {
+		fail("fetching", "Failed to fetch page: "+err.Error())
+		return
+	}
+
+	originalHost := ""
+	if finalURL != nil {
+		originalHost = finalURL.Host
+	}
+	aiHTML := utils.StripHeavyBase64DataURIs(rawHTML)
+	timeout := utils.AIRewriteTimeout(time.Duration(profile.TimeoutSec)*time.Second, len(aiHTML))
 	ctx, cancel := context.WithTimeout(c.Request.Context(), timeout+45*time.Second)
 	defer cancel()
 
@@ -135,19 +143,6 @@ func MirrorPhishingPage(c *gin.Context) {
 		}
 	}()
 
-	if !emit(mirrorProgressEvent{Stage: "fetching", Percent: 20, Message: "Fetching target page"}) {
-		return
-	}
-	rawHTML, finalURL, err := utils.FetchURLHTML(ctx, req.URL, 30*time.Second)
-	if err != nil {
-		fail("fetching", "Failed to fetch page: "+err.Error())
-		return
-	}
-
-	originalHost := ""
-	if finalURL != nil {
-		originalHost = finalURL.Host
-	}
 	if !emit(mirrorProgressEvent{
 		Stage:   "preparing",
 		Percent: 35,
@@ -159,7 +154,6 @@ func MirrorPhishingPage(c *gin.Context) {
 	}) {
 		return
 	}
-	aiHTML := utils.StripHeavyBase64DataURIs(rawHTML)
 
 	if !emit(mirrorProgressEvent{
 		Stage:   "rewriting",

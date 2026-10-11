@@ -1,7 +1,10 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
-import { Mail, Plus } from "lucide-react";
+import {
+  RiAddLine,
+  RiMailLine,
+} from "@remixicon/react";
 import { api } from "@/api";
 import { isAdminRole, useAuthStore } from "@/auth/auth-store";
 import { useI18n } from "@/i18n";
@@ -163,6 +166,17 @@ export default function SmtpServicesPage() {
     setModalOpen(true);
   };
 
+  const onFromEmailChange = (from_email: string) => {
+    setForm((prev) => ({
+      ...prev,
+      from_email,
+      username:
+        !prev.username.trim() || prev.username === prev.from_email
+          ? from_email
+          : prev.username,
+    }));
+  };
+
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) {
@@ -189,7 +203,7 @@ export default function SmtpServicesPage() {
         name: form.name.trim(),
         host: form.host.trim(),
         port: form.port,
-        username: form.username.trim(),
+        username: form.username.trim() || form.from_email.trim(),
         password: form.password,
         from_email: form.from_email.trim(),
         from_name: form.from_name.trim(),
@@ -301,13 +315,13 @@ export default function SmtpServicesPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="flex items-center gap-2 text-xl font-semibold">
-            <Mail className="h-5 w-5" />
+            <RiMailLine className="h-5 w-5" />
             {t("smtp.title")}
           </h1>
           <p className="text-sm text-slate-500">{t("smtp.subtitle")}</p>
         </div>
         <Button onClick={openCreate}>
-          <Plus className="h-4 w-4" />
+          <RiAddLine className="h-4 w-4" />
           {t("smtp.new")}
         </Button>
       </div>
@@ -469,12 +483,30 @@ export default function SmtpServicesPage() {
               />
 
               <Label className="flex h-9 items-center justify-end whitespace-nowrap text-right text-sm">
-                {t("smtp.username")}
+                {t("smtp.fromEmail")}
               </Label>
               <Input
-                value={form.username}
-                onChange={(e) => setForm({ ...form, username: e.target.value })}
+                value={form.from_email}
+                onChange={(e) => onFromEmailChange(e.target.value)}
+                placeholder="user@example.com"
               />
+
+              <Label className="flex h-9 items-center justify-end whitespace-nowrap text-right text-sm">
+                {t("smtp.username")}
+              </Label>
+              <div className="space-y-1">
+                <Input
+                  value={form.username}
+                  onChange={(e) =>
+                    setForm({ ...form, username: e.target.value })
+                  }
+                  placeholder={t("smtp.usernamePlaceholder")}
+                  autoComplete="username"
+                />
+                <p className="text-xs text-slate-500">
+                  {t("smtp.usernameHint")}
+                </p>
+              </div>
 
               <Label className="flex h-9 items-center justify-end whitespace-nowrap text-right text-sm">
                 {t("smtp.password")}
@@ -486,25 +518,18 @@ export default function SmtpServicesPage() {
                   onChange={(e) =>
                     setForm({ ...form, password: e.target.value })
                   }
-                  placeholder={editingId ? "••••••••" : ""}
+                  placeholder={editingId ? "••••••••" : t("smtp.password")}
                   autoComplete="new-password"
                 />
+                <p className="text-xs text-slate-500">
+                  {t("smtp.passwordHint")}
+                </p>
                 {editingId ? (
                   <p className="text-xs text-slate-500">
                     {t("smtp.passwordKeep")}
                   </p>
                 ) : null}
               </div>
-
-              <Label className="flex h-9 items-center justify-end whitespace-nowrap text-right text-sm">
-                {t("smtp.fromEmail")}
-              </Label>
-              <Input
-                value={form.from_email}
-                onChange={(e) =>
-                  setForm({ ...form, from_email: e.target.value })
-                }
-              />
 
               <Label className="flex h-9 items-center justify-end whitespace-nowrap text-right text-sm">
                 {t("smtp.fromName")}

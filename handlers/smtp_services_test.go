@@ -26,7 +26,7 @@ func TestNormalizeSmtpPayloadDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if svc.Port != 587 || !svc.UseTLS || svc.UseSSL {
+	if svc.Port != 587 || !svc.UseTLS || svc.UseSSL || svc.Username != "noreply@example.com" {
 		t.Fatalf("unexpected defaults: %+v", svc)
 	}
 

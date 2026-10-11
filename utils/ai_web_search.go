@@ -33,8 +33,7 @@ Rules:
       "value": "string",
       "label": "optional person/role",
       "source_url": "https://...",
-      "snippet": "short evidence quote",
-      "confidence": "high|medium|low"
+      "snippet": "short evidence quote"
     }
   ],
   "notes": "optional short summary"
@@ -61,9 +60,8 @@ type InfoGatherFindingDTO struct {
 	Kind       string `json:"kind"`
 	Value      string `json:"value"`
 	Label      string `json:"label"`
-	SourceURL  string `json:"source_url"`
-	Snippet    string `json:"snippet"`
-	Confidence string `json:"confidence"`
+	SourceURL string `json:"source_url"`
+	Snippet   string `json:"snippet"`
 }
 
 // InfoGatherResult is the parsed model output after validation.
@@ -955,13 +953,6 @@ func NormalizeInfoGatherFinding(f InfoGatherFindingDTO) (InfoGatherFindingDTO, b
 		return InfoGatherFindingDTO{}, false
 	}
 
-	conf := strings.ToLower(strings.TrimSpace(f.Confidence))
-	switch conf {
-	case "high", "medium", "low":
-	default:
-		conf = "medium"
-	}
-
 	label := strings.TrimSpace(f.Label)
 	snippet := strings.TrimSpace(f.Snippet)
 	if len(value) > 500 {
@@ -978,12 +969,11 @@ func NormalizeInfoGatherFinding(f InfoGatherFindingDTO) (InfoGatherFindingDTO, b
 	}
 
 	return InfoGatherFindingDTO{
-		Kind:       kind,
-		Value:      value,
-		Label:      label,
-		SourceURL:  source,
-		Snippet:    snippet,
-		Confidence: conf,
+		Kind:      kind,
+		Value:     value,
+		Label:     label,
+		SourceURL: source,
+		Snippet:   snippet,
 	}, true
 }
 

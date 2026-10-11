@@ -2,7 +2,11 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ChevronUp, Plus, Search } from "lucide-react";
+import {
+  RiAddLine,
+  RiArrowUpSLine,
+  RiSearchLine,
+} from "@remixicon/react";
 import { api } from "@/api";
 import { useI18n } from "@/i18n";
 import { Badge } from "@/components/ui/badge";
@@ -166,7 +170,7 @@ export default function WorkbenchInfoGatheringPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="flex items-center gap-2 text-xl font-semibold">
-            <Search className="h-5 w-5" />
+            <RiSearchLine className="h-5 w-5" />
             {t("workbench.infoGathering")}
           </h1>
           <p className="text-sm text-slate-500">
@@ -182,12 +186,12 @@ export default function WorkbenchInfoGatheringPage() {
         >
           {formOpen ? (
             <>
-              <ChevronUp className="h-4 w-4" />
+              <RiArrowUpSLine className="h-4 w-4" />
               {t("workbench.collapseForm")}
             </>
           ) : (
             <>
-              <Plus className="h-4 w-4" />
+              <RiAddLine className="h-4 w-4" />
               {t("workbench.infoGatherNew")}
             </>
           )}

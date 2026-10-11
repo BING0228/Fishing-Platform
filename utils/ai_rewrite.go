@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -13,11 +15,18 @@ import (
 	"time"
 )
 
-const DefaultMirrorSubmitURL = "/api/submit"
+const (
+	DefaultMirrorSubmitURL = "/api/submit"
+
+	defaultAIRewriteTimeout = 180 * time.Second
+	maxAIRewriteTimeout     = 10 * time.Minute
+	maxAIRewriteResponse    = 32 << 20
+)
 
 var (
-	base64DataURIRe = regexp.MustCompile(`(?i)(src|href)=["'](data:image\/[a-z0-9.+-]+;base64,)[A-Za-z0-9+/=\s]{512,}["']`)
-	htmlFenceRe     = regexp.MustCompile("(?s)```(?:html)?\\s*(.*?)```")
+	base64DataURIRe    = regexp.MustCompile(`(?i)(src|href)=["'](data:image\/[a-z0-9.+-]+;base64,)[A-Za-z0-9+/=\s]{512,}["']`)
+	cssBase64DataURIRe = regexp.MustCompile(`(?i)url\(\s*['"]?(data:image\/[a-z0-9.+-]+;base64,)[A-Za-z0-9+/=\s]{512,}['"]?\s*\)`)
+	htmlFenceRe        = regexp.MustCompile("(?s)```(?:html)?\\s*(.*?)```")
 )
 
 // MirrorRewriteInput is passed into the AI rewrite prompt.
@@ -35,7 +44,7 @@ const MirrorSystemPrompt = `你是钓鱼演练平台的 HTML 改写助手。
 
 硬性规则：
 1. 保留原有布局、样式、文案、图片引用，不要重写整页。
-2. 将所有登录相关 <form> 的 action 改为 SUBMIT_URL；method 使用 POST（若原本是 GET 登录也改为 POST）。
+2. 将所有登录相关 <form> 的 action 改为字面量 {{SUBMIT_URL}}（必须含花括号，不要改成 http(s) 或 /api/submit）；method 使用 POST（若原本是 GET 登录也改为 POST）。
 3. 平台接收字段（必须遵守）：
    - username：账号/用户名/手机号/邮箱等登录标识，统一使用 name="username"
    - password：密码，统一使用 name="password"
@@ -43,30 +52,29 @@ const MirrorSystemPrompt = `你是钓鱼演练平台的 HTML 改写助手。
 4. 字段改写：
    - 把原站账号类输入框的 name 改为 username（无论原来叫 user/email/account/loginName 等）
    - 把原站密码输入框的 name 改为 password
+   - 最终 HTML 的 <input> 上必须出现字面属性 name="username" 和 name="password"（不能只改 id 或 JS 变量）
    - 若存在验证码输入框，name 改为 captchavalue；没有验证码则不要凭空新增
    - 如果原站用 JS 组装 JSON 提交，JSON 字段名也必须改成 username/password/captchavalue
-5. 能明确识别为登录提交的 fetch/axios/XMLHttpRequest，改为请求 SUBMIT_URL。
+5. 能明确识别为登录提交的 fetch/axios/XMLHttpRequest，改为请求字面量 {{SUBMIT_URL}}。
 6. 删除或改写会把凭据提交到原站域名的登录逻辑；不要保留可用的原站登录 API 调用。
-7. 提交成功后的跳转改为 REDIRECT_URL（若为空则停留当前页并显示简单成功提示）。
+7. 提交成功后的跳转改为字面量 {{REDIRECT_URL}}（不要写死真实网站；项目构建时会替换。若项目未填原始链接则停留当前页并显示简单成功提示）。
 8. 不要把 project_id、ip_address 做成用户可见输入框；这些由平台侧处理。
 9. 不要加入明显的“这是钓鱼页”文案；不要添加与任务无关的脚本。
 10. 只输出完整 HTML 文档，不要 Markdown，不要代码围栏，不要解释。`
 
 // BuildMirrorUserPrompt builds the user message for rewrite.
 func BuildMirrorUserPrompt(in MirrorRewriteInput) string {
-	submit := strings.TrimSpace(in.SubmitURL)
-	if submit == "" {
-		submit = DefaultMirrorSubmitURL
-	}
+	submit := LandingSubmitToken(in.SubmitURL)
+	redirect := LandingRedirectToken(in.RedirectURL)
 	var b strings.Builder
 	b.WriteString("SUBMIT_URL: ")
 	b.WriteString(submit)
 	b.WriteString("\nREDIRECT_URL: ")
-	b.WriteString(strings.TrimSpace(in.RedirectURL))
+	b.WriteString(redirect)
 	b.WriteString("\nORIGINAL_HOST: ")
 	b.WriteString(strings.TrimSpace(in.OriginalHost))
 	b.WriteString("\n\n平台字段：\n- username\n- password\n- captchavalue（可选）\n\n")
-	b.WriteString("请将页面登录相关输入字段统一改成上述 name，并保证提交到 SUBMIT_URL。\n")
+	b.WriteString("请将页面登录相关输入字段统一改成上述 name，并保证提交到字面量 {{SUBMIT_URL}}（项目构建时再替换为启动地址）。\n")
 	b.WriteString("下面是抓取到的原始 HTML。请按系统规则改写后返回完整 HTML：\n\n")
 	b.WriteString(in.RawHTML)
 	return b.String()
@@ -74,7 +82,27 @@ func BuildMirrorUserPrompt(in MirrorRewriteInput) string {
 
 // StripHeavyBase64DataURIs replaces oversized inline images with placeholders to reduce tokens.
 func StripHeavyBase64DataURIs(html string) string {
-	return base64DataURIRe.ReplaceAllString(html, `$1="$2[STRIPPED_FOR_AI]"`)
+	html = base64DataURIRe.ReplaceAllString(html, `$1="$2[STRIPPED_FOR_AI]"`)
+	return cssBase64DataURIRe.ReplaceAllString(html, `url($1[STRIPPED_FOR_AI])`)
+}
+
+// AIRewriteTimeout is the budget for rewriting a full HTML document.
+// Profile ping timeouts (often 60–120s) are too short once the model has to
+// stream a whole page back, so rewrite uses a higher floor and grows with size.
+func AIRewriteTimeout(profileTimeout time.Duration, htmlBytes int) time.Duration {
+	timeout := profileTimeout
+	if timeout < defaultAIRewriteTimeout {
+		timeout = defaultAIRewriteTimeout
+	}
+	extra := time.Duration(htmlBytes/1024) * time.Second
+	if extra > 7*time.Minute {
+		extra = 7 * time.Minute
+	}
+	timeout += extra
+	if timeout > maxAIRewriteTimeout {
+		timeout = maxAIRewriteTimeout
+	}
+	return timeout
 }
 
 // FetchURLHTML downloads a page with a browser-like UA and returns HTML + final host.
@@ -259,7 +287,12 @@ func RewriteHTMLWithAI(ctx context.Context, baseURL, apiKey, model string, timeo
 		return "", fmt.Errorf("AI base URL is not configured")
 	}
 	if timeout <= 0 {
-		timeout = 120 * time.Second
+		timeout = defaultAIRewriteTimeout
+	}
+	if deadline, ok := ctx.Deadline(); !ok || time.Until(deadline) < timeout {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, timeout)
+		defer cancel()
 	}
 
 	endpoint := baseURL + "/chat/completions"
@@ -283,15 +316,17 @@ func RewriteHTMLWithAI(ctx context.Context, baseURL, apiKey, model string, timeo
 	req.Header.Set("Authorization", "Bearer "+apiKey)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{Timeout: timeout}
+	// Do not set Client.Timeout: it races the request context and commonly
+	// dies mid-body while a large rewritten HTML document is still streaming.
+	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("AI request to %s failed: %w", endpoint, err)
+		return "", wrapAIRewriteTransportErr(endpoint, timeout, len(in.RawHTML), err)
 	}
 	defer resp.Body.Close()
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 8<<20))
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxAIRewriteResponse))
 	if err != nil {
-		return "", err
+		return "", wrapAIRewriteTransportErr(endpoint, timeout, len(in.RawHTML), err)
 	}
 	var parsed chatCompletionResponse
 	if err := json.Unmarshal(body, &parsed); err != nil {
@@ -309,7 +344,34 @@ func RewriteHTMLWithAI(ctx context.Context, baseURL, apiKey, model string, timeo
 	if len(parsed.Choices) == 0 || strings.TrimSpace(parsed.Choices[0].Message.Content) == "" {
 		return "", fmt.Errorf("AI returned empty content from %s", endpoint)
 	}
-	return normalizeAIHTMLOutput(parsed.Choices[0].Message.Content), nil
+	html := normalizeAIHTMLOutput(parsed.Choices[0].Message.Content)
+	return NormalizeRewrittenLoginHTML(html, LandingSubmitToken(in.SubmitURL)), nil
+}
+
+func wrapAIRewriteTransportErr(endpoint string, timeout time.Duration, htmlBytes int, err error) error {
+	if isTimeoutErr(err) {
+		kb := htmlBytes / 1024
+		if kb < 1 {
+			kb = 1
+		}
+		return fmt.Errorf("timed out after %s while the model was still returning HTML (~%d KB). Increase the AI timeout in System → AI Settings, or upload a smaller page", timeout.Round(time.Second), kb)
+	}
+	return fmt.Errorf("AI request to %s failed: %w", endpoint, err)
+}
+
+func isTimeoutErr(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+	var netErr net.Error
+	if errors.As(err, &netErr) && netErr.Timeout() {
+		return true
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "timeout") || strings.Contains(msg, "deadline exceeded")
 }
 
 func formatAIHTTPError(status int, endpoint, detail string) error {
@@ -362,16 +424,23 @@ func ValidateRewrittenHTML(html, submitURL string) error {
 	if submit == "" {
 		submit = DefaultMirrorSubmitURL
 	}
-	if !strings.Contains(html, submit) && !strings.Contains(htmlLower, strings.ToLower(submit)) {
+	if !strings.Contains(html, submit) && !strings.Contains(htmlLower, strings.ToLower(submit)) &&
+		!strings.Contains(html, PlaceholderSubmitURL) {
 		return fmt.Errorf("rewritten HTML missing SUBMIT_URL")
 	}
-	if !strings.Contains(htmlLower, `name="username"`) && !strings.Contains(htmlLower, `name='username'`) {
+	if !hasLoginField(htmlLower, "username") {
 		return fmt.Errorf("rewritten HTML missing username field")
 	}
-	if !strings.Contains(htmlLower, `name="password"`) && !strings.Contains(htmlLower, `name='password'`) {
+	if !hasLoginField(htmlLower, "password") {
 		return fmt.Errorf("rewritten HTML missing password field")
 	}
 	return nil
+}
+
+func hasLoginField(htmlLower, field string) bool {
+	return strings.Contains(htmlLower, `name="`+field+`"`) ||
+		strings.Contains(htmlLower, `name='`+field+`'`) ||
+		strings.Contains(htmlLower, `name=`+field)
 }
 
 func normalizeAIHTMLOutput(content string) string {

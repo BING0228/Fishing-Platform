@@ -108,11 +108,8 @@ func RewriteUploadPhishingPage(c *gin.Context) {
 		})
 	}
 
-	submitURL := strings.TrimSpace(req.SubmitURL)
-	if submitURL == "" {
-		submitURL = utils.DefaultMirrorSubmitURL
-	}
-	redirectURL := strings.TrimSpace(req.RedirectURL)
+	submitURL := utils.LandingSubmitToken(req.SubmitURL)
+	redirectURL := utils.LandingRedirectToken(req.RedirectURL)
 	pageURL := strings.TrimSpace(req.URL)
 	originalHost := strings.TrimSpace(req.OriginalHost)
 	if originalHost == "" && pageURL != "" {
@@ -121,10 +118,8 @@ func RewriteUploadPhishingPage(c *gin.Context) {
 		}
 	}
 
-	timeout := time.Duration(profile.TimeoutSec) * time.Second
-	if timeout <= 0 {
-		timeout = 120 * time.Second
-	}
+	aiHTML := utils.StripHeavyBase64DataURIs(html)
+	timeout := utils.AIRewriteTimeout(time.Duration(profile.TimeoutSec)*time.Second, len(aiHTML))
 	ctx, cancel := context.WithTimeout(c.Request.Context(), timeout+45*time.Second)
 	defer cancel()
 
@@ -156,7 +151,6 @@ func RewriteUploadPhishingPage(c *gin.Context) {
 	}) {
 		return
 	}
-	aiHTML := utils.StripHeavyBase64DataURIs(html)
 
 	if !emit(mirrorProgressEvent{
 		Stage:   "rewriting",

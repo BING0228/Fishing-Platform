@@ -222,8 +222,8 @@ func TestSyncProjectDeploymentsSupportsManyToMany(t *testing.T) {
 	if err := db.Where("agent_id = ?", agentA.ID).Order("runtime_port ASC").Find(&agentADeployments).Error; err != nil {
 		t.Fatal(err)
 	}
-	if agentADeployments[0].RuntimePort != 10000 || agentADeployments[1].RuntimePort != 10001 {
-		t.Fatalf("agent A ports = %d, %d; want 10000, 10001", agentADeployments[0].RuntimePort, agentADeployments[1].RuntimePort)
+	if agentADeployments[0].RuntimePort != agentProjectPortStart || agentADeployments[1].RuntimePort != agentProjectPortStart+1 {
+		t.Fatalf("agent A ports = %d, %d; want %d, %d", agentADeployments[0].RuntimePort, agentADeployments[1].RuntimePort, agentProjectPortStart, agentProjectPortStart+1)
 	}
 }
 

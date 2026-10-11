@@ -50,7 +50,7 @@ One Go binary embeds the UI (`frontend/dist`) and serves API + console on the sa
 ## Features
 
 - **Projects** — upload HTML (or pull a page into Page Builder). Run with Docker or local Flask. Optional TLS, agents, QR relay.
-- **Mail** — SMTP profiles, bulk send, per-campaign open/click tracking (`/api/<slug>`). Noise in HTML if you want it.
+- **Mail** — SMTP profiles, templates, scheduled send, bulk send, per-campaign open/click tracking (`/api/<slug>`). Noise in HTML if you want it.
 - **Hooks** — Feishu, WeCom, Telegram, Slack, DingTalk, Discord. Bind a webhook to the project; submit → “fish on the hook” to chat. Opens/clicks do not fire this.
 - **QR** — live QR image at `/q/{slug}.png`. A local script uploads screen frames; drop `{{QR_RELAY_URL}}` / `{{QR_RELAY_IMG}}` in the page.
 - **Info gathering** — point at your own AI endpoint (`/responses` + `web_search`). Pull public emails/phones, export CSV, hand off to mail.
@@ -98,7 +98,7 @@ Needs Linux, macOS, or Windows.
 |------|---------|
 | Console / API | `:8000` |
 | Frontend dev | `:8081` → proxies `/api` to `:8000` |
-| Agent landing pages | `10000–20000/TCP` on the agent host |
+| Agent landing pages | `20000–30000/TCP` on the agent host |
 
 ### 1. Config
 
@@ -171,7 +171,7 @@ Save it, delete the file. Later resets: `cmd/reset-password`.
 
 Don't want everything on the control plane? Drop **fishing-agent** on other machines. One project can hit many nodes; one node can host many projects. Each binding gets its own port, revision, and logs. Submits/logs go back to the mothership. If the plane blinks, the agent buffers and retries.
 
-Project ports default to **`10000–20000/TCP`**. The agent dials **out** to the control plane. Visitors hit the agent (or `advertise_host` behind a reverse proxy — see the full guide).
+Project ports default to **`20000–30000/TCP`**. The agent dials **out** to the control plane. Visitors hit the agent (or `advertise_host` behind a reverse proxy — see the full guide).
 
 **Token** — set `security.agent_registration_token` on the plane (not the JWT secret) and restart. First register uses that shared token once, then `{work_dir}/state.json` holds the per-agent id/token (`0600` on Linux/macOS).
 
@@ -233,7 +233,7 @@ Access log: `data/access-YYYY-MM-DD.log`. Fast dashboard polls stay out of the c
 |---|---|
 | Placeholders (pages + mail) | [EN](docs/placeholders.en.md) · [ZH](docs/placeholders.zh.md) |
 | Agents (systemd, Windows, proxy) | [docs/agent-deployment.md](docs/agent-deployment.md) |
-| QR capture script | [scripts/qr-relay](scripts/qr-relay/README.md) — or download the zip from the QR page |
+| QR capture script | [EN](scripts/qr-relay/README.md) · [ZH](scripts/qr-relay/README.zh.md) — or download the zip from the QR page |
 
 QR: create a relay in the console, copy the upload token (shown once), drop it in the script config. It only uploads image frames + heartbeat. Public URL is `/q/{slug}.png`.
 

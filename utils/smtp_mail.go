@@ -108,11 +108,6 @@ func SendSMTPMail(cfg SmtpSendConfig, msg SmtpMessage) error {
 	}
 
 	addr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
-	var auth smtp.Auth
-	if strings.TrimSpace(cfg.Username) != "" {
-		auth = smtp.PlainAuth("", cfg.Username, cfg.Password, cfg.Host)
-	}
-
 	tlsConfig := &tls.Config{
 		ServerName: cfg.Host,
 		MinVersion: tls.VersionTLS12,
@@ -129,7 +124,7 @@ func SendSMTPMail(cfg SmtpSendConfig, msg SmtpMessage) error {
 			return fmt.Errorf("SMTP client failed: %w", err)
 		}
 		defer client.Close()
-		return smtpClientSend(client, auth, cfg.FromEmail, recipients, raw)
+		return smtpClientSend(client, cfg, recipients, raw)
 	}
 
 	conn, err := net.DialTimeout("tcp", addr, 15*time.Second)
@@ -153,17 +148,21 @@ func SendSMTPMail(cfg SmtpSendConfig, msg SmtpMessage) error {
 		}
 	}
 
-	return smtpClientSend(client, auth, cfg.FromEmail, recipients, raw)
+	return smtpClientSend(client, cfg, recipients, raw)
 }
 
-func smtpClientSend(client *smtp.Client, auth smtp.Auth, from string, to []string, raw []byte) error {
+func smtpClientSend(client *smtp.Client, cfg SmtpSendConfig, to []string, raw []byte) error {
+	advertised := ""
+	if ok, params := client.Extension("AUTH"); ok {
+		advertised = params
+	}
+	auth := wrapSmtpAuth(cfg, chooseSmtpAuth(cfg, advertised))
 	if auth != nil {
-		if ok, _ := client.Extension("AUTH"); ok {
-			if err := client.Auth(auth); err != nil {
-				return fmt.Errorf("SMTP auth failed: %w", err)
-			}
+		if err := client.Auth(auth); err != nil {
+			return fmt.Errorf("SMTP auth failed: %w", err)
 		}
 	}
+	from := strings.TrimSpace(cfg.FromEmail)
 	if err := client.Mail(from); err != nil {
 		return fmt.Errorf("SMTP MAIL FROM failed: %w", err)
 	}

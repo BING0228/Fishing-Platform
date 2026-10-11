@@ -2,27 +2,27 @@
 
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
-  LayoutDashboard,
-  LogOut,
-  Languages,
-  Mail,
-  Network,
-  ShieldBan,
-  FolderKanban,
-  Bot,
-  Settings,
-  ChevronRight,
-  Send,
-  Wrench,
-  LayoutTemplate,
-  QrCode,
-  ScrollText,
-  Users,
-  BrainCircuit,
-  Search,
-  Link2,
-  PanelLeft,
-} from "lucide-react";
+  RiArrowRightSLine,
+  RiBrainAi3Line,
+  RiDashboardLine,
+  RiFileList3Line,
+  RiGroupLine,
+  RiKanbanView2,
+  RiLayout4Line,
+  RiLink,
+  RiLogoutBoxRLine,
+  RiMailLine,
+  RiNodeTree,
+  RiQrCodeLine,
+  RiRobot2Line,
+  RiSearchLine,
+  RiSendPlane2Line,
+  RiSettings3Line,
+  RiShieldCrossLine,
+  RiSideBarLine,
+  RiToolsLine,
+  RiTranslate2,
+} from "@remixicon/react";
 import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "@/i18n";
 import { isAdminRole, useAuthStore } from "@/auth/auth-store";
@@ -63,26 +63,26 @@ type NavItem = {
 };
 
 const primaryNav: NavItem[] = [
-  { href: "/", key: "nav.dashboard", icon: LayoutDashboard },
-  { href: "/projects", key: "nav.projects", icon: FolderKanban },
-  { href: "/audit-logs", key: "nav.auditLogs", icon: ScrollText, adminOnly: true },
+  { href: "/", key: "nav.dashboard", icon: RiDashboardLine },
+  { href: "/projects", key: "nav.projects", icon: RiKanbanView2 },
+  { href: "/audit-logs", key: "nav.auditLogs", icon: RiFileList3Line, adminOnly: true },
 ];
 
 const workbenchNav: NavItem[] = [
-  { href: "/workbench/mail", key: "nav.sendMail", icon: Send },
-  { href: "/workbench/page-builder", key: "nav.pageBuilder", icon: LayoutTemplate },
-  { href: "/workbench/info-gathering", key: "nav.infoGathering", icon: Search },
-  { href: "/workbench/qr-phishing", key: "nav.qrPhishing", icon: QrCode },
+  { href: "/workbench/mail", key: "nav.sendMail", icon: RiSendPlane2Line },
+  { href: "/workbench/page-builder", key: "nav.pageBuilder", icon: RiLayout4Line },
+  { href: "/workbench/info-gathering", key: "nav.infoGathering", icon: RiSearchLine },
+  { href: "/workbench/qr-phishing", key: "nav.qrPhishing", icon: RiQrCodeLine },
 ];
 
 const systemNav: NavItem[] = [
-  { href: "/robots", key: "nav.robots", icon: Bot },
-  { href: "/agents", key: "nav.agents", icon: Network },
-  { href: "/ip-blacklist", key: "nav.ipBlacklist", icon: ShieldBan },
-  { href: "/smtp-services", key: "nav.smtpServices", icon: Mail },
-  { href: "/users", key: "nav.users", icon: Users, adminOnly: true },
-  { href: "/ai-settings", key: "nav.aiSettings", icon: BrainCircuit, adminOnly: true },
-  { href: "/mail-tracking", key: "nav.mailTracking", icon: Link2, adminOnly: true },
+  { href: "/robots", key: "nav.robots", icon: RiRobot2Line },
+  { href: "/agents", key: "nav.agents", icon: RiNodeTree },
+  { href: "/ip-blacklist", key: "nav.ipBlacklist", icon: RiShieldCrossLine },
+  { href: "/smtp-services", key: "nav.smtpServices", icon: RiMailLine },
+  { href: "/users", key: "nav.users", icon: RiGroupLine, adminOnly: true },
+  { href: "/ai-settings", key: "nav.aiSettings", icon: RiBrainAi3Line, adminOnly: true },
+  { href: "/mail-tracking", key: "nav.mailTracking", icon: RiLink, adminOnly: true },
 ];
 
 function isActivePath(pathname: string, href: string) {
@@ -245,9 +245,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                         : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                     )}
                   >
-                    <Wrench className="h-4 w-4 shrink-0" />
+                    <RiToolsLine className="h-4 w-4 shrink-0" />
                     <span className="flex-1 text-left">{t("nav.workbench")}</span>
-                    <ChevronRight
+                    <RiArrowRightSLine
                       className={cn(
                         "h-4 w-4 transition-transform",
                         workbenchOpen && "rotate-90",
@@ -267,7 +267,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                           setWorkbenchOpen(true);
                         }}
                       >
-                        <Wrench className="h-4 w-4" />
+                        <RiToolsLine className="h-4 w-4" />
                       </button>
                     </TooltipTrigger>
                     <TooltipContent side="right">{t("nav.workbench")}</TooltipContent>
@@ -302,9 +302,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                         : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                     )}
                   >
-                    <Settings className="h-4 w-4 shrink-0" />
+                    <RiSettings3Line className="h-4 w-4 shrink-0" />
                     <span className="flex-1 text-left">{t("nav.system")}</span>
-                    <ChevronRight
+                    <RiArrowRightSLine
                       className={cn(
                         "h-4 w-4 transition-transform",
                         systemOpen && "rotate-90",
@@ -324,7 +324,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                           setSystemOpen(true);
                         }}
                       >
-                        <Settings className="h-4 w-4" />
+                        <RiSettings3Line className="h-4 w-4" />
                       </button>
                     </TooltipTrigger>
                     <TooltipContent side="right">{t("nav.system")}</TooltipContent>
@@ -369,7 +369,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   onClick={handleLogout}
                   aria-label={t("app.logout")}
                 >
-                  <LogOut className="h-4 w-4" />
+                  <RiLogoutBoxRLine className="h-4 w-4" />
                 </Button>
               </div>
             ) : (
@@ -403,7 +403,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               onClick={() => setCollapsed((v) => !v)}
               aria-label="Toggle sidebar"
             >
-              <PanelLeft className="h-4 w-4" />
+              <RiSideBarLine className="h-4 w-4" />
             </Button>
             <Separator orientation="vertical" className="mr-1 h-4" />
             <div className="text-sm font-medium">{pageTitle}</div>
@@ -418,7 +418,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     : "locale.switchToChinese",
                 )}
               >
-                <Languages className="h-4 w-4" />
+                <RiTranslate2 className="h-4 w-4" />
               </Button>
             </div>
           </header>

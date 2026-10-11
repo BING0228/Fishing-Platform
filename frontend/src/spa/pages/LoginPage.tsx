@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Languages } from "lucide-react";
+import { RiTranslate2 } from "@remixicon/react";
 import { api } from "@/api";
 import { useAuthStore } from "@/auth/auth-store";
 import { useI18n } from "@/i18n";
@@ -11,7 +11,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BrandLogo } from "@/components/brand-logo";
-import { cn } from "@/lib/utils";
 
 export default function LoginPage() {
   const { t, locale, setLocale } = useI18n();
@@ -59,18 +58,12 @@ export default function LoginPage() {
           locale === "zh" ? "locale.switchToEnglish" : "locale.switchToChinese",
         )}
       >
-        <Languages className="h-4 w-4" />
+        <RiTranslate2 className="h-4 w-4" />
       </Button>
 
-      {/* Adaptive but capped smaller: phone ~24rem, desktop ~42–48rem */}
-      <div className="flex w-full max-w-[min(92vw,24rem)] flex-col gap-4 md:max-w-[min(90vw,42rem)] lg:max-w-[min(86vw,48rem)]">
+      <div className="flex w-full max-w-sm flex-col gap-4 md:max-w-[min(90vw,48rem)]">
         <Card className="overflow-hidden p-0 shadow-md">
-          <CardContent
-            className={cn(
-              "grid p-0 md:grid-cols-2",
-              "md:min-h-[min(26rem,58svh)] lg:min-h-[min(28rem,55svh)]",
-            )}
-          >
+          <CardContent className="grid p-0 md:grid-cols-2 md:min-h-[28rem]">
             <form
               className="flex flex-col justify-center p-5 sm:p-6 md:px-7 md:py-7"
               onSubmit={onSubmit}
@@ -78,7 +71,7 @@ export default function LoginPage() {
               <div className="mx-auto flex w-full max-w-sm flex-col gap-4 sm:gap-5">
                 <div className="flex flex-col items-center gap-2 text-center">
                   <h1 className="flex items-center gap-2 text-xl font-bold sm:text-2xl">
-                    <BrandLogo size={32} framed title={t("app.title")} />
+                    <BrandLogo size={32} title={t("app.title")} />
                     <span>{t("app.title")}</span>
                   </h1>
                   <p className="text-balance text-xs text-muted-foreground sm:text-sm">

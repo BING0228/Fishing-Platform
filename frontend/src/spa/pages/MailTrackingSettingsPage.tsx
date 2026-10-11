@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
-import { Link2 } from "lucide-react";
+import { RiLink } from "@remixicon/react";
 import { api } from "@/api";
 import { useI18n } from "@/i18n";
 import { Button } from "@/components/ui/button";
@@ -101,7 +101,7 @@ export default function MailTrackingSettingsPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="flex items-center gap-2 text-xl font-semibold">
-            <Link2 className="h-5 w-5" />
+            <RiLink className="h-5 w-5" />
             {t("nav.mailTracking")}
           </h1>
           <p className="text-sm text-slate-500">{t("mailTracking.subtitle")}</p>

@@ -24,13 +24,15 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-//go:embed frontend/dist
+// all: includes _next and other underscore-prefixed paths that plain
+// go:embed directory patterns skip (otherwise the SPA JS/CSS 404).
+//go:embed all:frontend/dist
 var frontendFS embed.FS
 
 //go:embed qqwry.dat
 var qqwryData []byte
 
-//go:embed scripts/qr-relay/qr_relay.py scripts/qr-relay/requirements.txt scripts/qr-relay/README.md scripts/qr-relay/config.example.yaml
+//go:embed scripts/qr-relay/qr_relay.py scripts/qr-relay/requirements.txt scripts/qr-relay/README.md scripts/qr-relay/README.zh.md scripts/qr-relay/config.example.yaml
 var qrRelayScriptFS embed.FS
 
 func main() {
@@ -107,6 +109,10 @@ func main() {
 	hostMetricsCtx, hostMetricsCancel := context.WithCancel(context.Background())
 	defer hostMetricsCancel()
 	hostmetrics.Start(hostMetricsCtx)
+
+	mailSchedCtx, mailSchedCancel := context.WithCancel(context.Background())
+	defer mailSchedCancel()
+	handlers.StartMailCampaignScheduler(mailSchedCtx)
 
 	// Initialize JWT
 	middleware.InitJWT()
@@ -282,6 +288,12 @@ func main() {
 		both(protected, http.MethodGet, "/mail-campaigns/:id/recipients/", handlers.GetMailCampaignRecipients)
 		both(protected, http.MethodGet, "/mail-campaigns/:id/events/", handlers.GetMailCampaignEvents)
 
+		both(protected, http.MethodGet, "/mail-templates/", handlers.GetMailTemplates)
+		both(protected, http.MethodPost, "/mail-templates/", handlers.CreateMailTemplate)
+		both(protected, http.MethodGet, "/mail-templates/:id/", handlers.GetMailTemplate)
+		both(protected, http.MethodPut, "/mail-templates/:id/", handlers.UpdateMailTemplate)
+		both(protected, http.MethodDelete, "/mail-templates/:id/", handlers.DeleteMailTemplate)
+
 		both(protected, http.MethodGet, "/info-gather-jobs/", handlers.GetInfoGatherJobs)
 		both(protected, http.MethodPost, "/info-gather-jobs/", handlers.CreateInfoGatherJob)
 		both(protected, http.MethodGet, "/info-gather-jobs/:id/", handlers.GetInfoGatherJob)
@@ -341,29 +353,35 @@ func main() {
 	httpFS := http.FS(frontendDist)
 	fileServer := http.FileServer(httpFS)
 
-	// Serve static files with a catch-all route and cache control
+	// Serve static files with a catch-all route and cache control.
+	// Gin wildcard params include a leading slash; trim it before joining
+	// or FileServer looks up "/_next//static/..." and returns 404.
+	staticPath := func(prefix, filepath string) string {
+		return prefix + strings.TrimPrefix(filepath, "/")
+	}
+
 	r.Any("/assets/*filepath", platformBasicAuth, func(c *gin.Context) {
 		c.Header("Cache-Control", "no-cache, no-store, must-revalidate")
-		c.Request.URL.Path = "/assets/" + c.Param("filepath")
+		c.Request.URL.Path = staticPath("/assets/", c.Param("filepath"))
 		fileServer.ServeHTTP(c.Writer, c.Request)
 	})
 
 	// Next.js static export assets
 	r.Any("/_next/*filepath", platformBasicAuth, func(c *gin.Context) {
 		c.Header("Cache-Control", "no-cache, no-store, must-revalidate")
-		c.Request.URL.Path = "/_next/" + c.Param("filepath")
+		c.Request.URL.Path = staticPath("/_next/", c.Param("filepath"))
 		fileServer.ServeHTTP(c.Writer, c.Request)
 	})
 
 	r.Any("/js/*filepath", platformBasicAuth, func(c *gin.Context) {
 		c.Header("Cache-Control", "no-cache, no-store, must-revalidate")
-		c.Request.URL.Path = "/js/" + c.Param("filepath")
+		c.Request.URL.Path = staticPath("/js/", c.Param("filepath"))
 		fileServer.ServeHTTP(c.Writer, c.Request)
 	})
 
 	r.Any("/css/*filepath", platformBasicAuth, func(c *gin.Context) {
 		c.Header("Cache-Control", "no-cache, no-store, must-revalidate")
-		c.Request.URL.Path = "/css/" + c.Param("filepath")
+		c.Request.URL.Path = staticPath("/css/", c.Param("filepath"))
 		fileServer.ServeHTTP(c.Writer, c.Request)
 	})
 
@@ -386,7 +404,8 @@ func main() {
 		fileServer.ServeHTTP(c.Writer, c.Request)
 	})
 
-	// Handle SPA routing - serve index.html for all other non-API routes with aggressive cache control
+	// Handle SPA routing - serve real static files from the embed first
+	// (e.g. /login-cover.jpg), then fall back to index.html for client routes.
 	r.NoRoute(func(c *gin.Context) {
 		// Check if it's an API request
 		if strings.HasPrefix(c.Request.URL.Path, "/api") {
@@ -396,6 +415,16 @@ func main() {
 
 		if !middleware.EnsurePlatformBasicAuth(c) {
 			return
+		}
+
+		rel := strings.TrimPrefix(c.Request.URL.Path, "/")
+		if rel != "" && !strings.Contains(rel, "..") {
+			if f, err := frontendDist.Open(rel); err == nil {
+				_ = f.Close()
+				c.Header("Cache-Control", "no-cache, no-store, must-revalidate")
+				fileServer.ServeHTTP(c.Writer, c.Request)
+				return
+			}
 		}
 
 		// Serve index.html for SPA routing with aggressive cache control

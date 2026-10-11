@@ -8,9 +8,9 @@ import (
 func TestParseInfoGatherJSONValid(t *testing.T) {
 	raw := `{
   "findings": [
-    {"kind":"email","value":"Alice@Example.com","label":"Alice","source_url":"https://example.com/team","snippet":"contact","confidence":"high"},
-    {"kind":"phone","value":"+1 (555) 123-4567","source_url":"https://example.com/contact","confidence":"medium"},
-    {"kind":"email","value":"alice@example.com","source_url":"https://dup.example","confidence":"low"}
+    {"kind":"email","value":"Alice@Example.com","label":"Alice","source_url":"https://example.com/team","snippet":"contact"},
+    {"kind":"phone","value":"+1 (555) 123-4567","source_url":"https://example.com/contact"},
+    {"kind":"email","value":"alice@example.com","source_url":"https://dup.example"}
   ],
   "notes":"ok"
 }`
@@ -30,7 +30,7 @@ func TestParseInfoGatherJSONValid(t *testing.T) {
 }
 
 func TestParseInfoGatherJSONRejectsNoSource(t *testing.T) {
-	raw := `{"findings":[{"kind":"email","value":"a@b.com","source_url":"","confidence":"high"}]}`
+	raw := `{"findings":[{"kind":"email","value":"a@b.com","source_url":""}]}`
 	_, err := ParseInfoGatherJSON(raw)
 	if err == nil {
 		t.Fatal("expected error for missing source")
@@ -38,7 +38,7 @@ func TestParseInfoGatherJSONRejectsNoSource(t *testing.T) {
 }
 
 func TestParseInfoGatherJSONFenced(t *testing.T) {
-	raw := "```json\n{\"findings\":[{\"kind\":\"email\",\"value\":\"ops@example.com\",\"source_url\":\"https://example.com\",\"confidence\":\"high\"}]}\n```"
+	raw := "```json\n{\"findings\":[{\"kind\":\"email\",\"value\":\"ops@example.com\",\"source_url\":\"https://example.com\"}]}\n```"
 	got, err := ParseInfoGatherJSON(raw)
 	if err != nil {
 		t.Fatalf("ParseInfoGatherJSON: %v", err)
@@ -71,9 +71,9 @@ func TestNormalizeInfoGatherFindingPhone(t *testing.T) {
 		t.Fatal("short phone should fail")
 	}
 	got, ok := NormalizeInfoGatherFinding(InfoGatherFindingDTO{
-		Kind: "phone", Value: "13800138000", SourceURL: "https://x.test", Confidence: "HIGH",
+		Kind: "phone", Value: "13800138000", SourceURL: "https://x.test",
 	})
-	if !ok || got.Confidence != "high" {
+	if !ok || got.Value != "13800138000" {
 		t.Fatalf("got=%+v ok=%v", got, ok)
 	}
 }

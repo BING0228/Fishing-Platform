@@ -7,7 +7,7 @@ The two sets are **not interchangeable**:
 - Do **not** put **project landing-page** markers in email
 - Do **not** put **email** markers in project HTML
 
-Page Library / Page Builder preview does **not** replace project placeholders. Upload the HTML to **Projects**, then build/start the project.
+Page Library / Page Builder preview does **not** replace project placeholders. Upload or mirror HTML in **Page Builder**, pick that page when creating a project, then build/start.
 
 ---
 
@@ -56,7 +56,7 @@ Use these placeholders in HTML uploaded to a project.
 ### Steps (when using QR)
 
 1. Workbench → **QR Phishing**: create a relay and run the local capture script  
-2. **Projects**: create or edit a project, upload HTML that includes the placeholders, select the relay under “QR relay”  
+2. **Projects**: create or edit a project, pick a Page Builder page, select the relay under “QR relay”  
 3. Build and start the project  
 4. Open the project URL and confirm the submit URL and QR image render  
 

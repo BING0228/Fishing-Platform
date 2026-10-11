@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
-import { Plus } from "lucide-react";
+import { RiAddLine } from "@remixicon/react";
 import { api } from "@/api";
 import { useAuthStore } from "@/auth/auth-store";
 import { useI18n } from "@/i18n";
@@ -174,7 +174,7 @@ export default function UsersPage() {
         <div className="flex gap-2">
           <RefreshButton onClick={fetchUsers} loading={loading} />
           <Button onClick={openCreate}>
-            <Plus className="h-4 w-4" />
+            <RiAddLine className="h-4 w-4" />
             {t("users.newOperator")}
           </Button>
         </div>

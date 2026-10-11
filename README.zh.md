@@ -50,7 +50,7 @@
 ## 能干什么
 
 - **项目** — 上传 HTML（或在页面制作里扒页）。Docker 或本机 Flask。可选 TLS、Agent、QR 中继。
-- **邮件** — 多套 SMTP，群发，每个活动单独的打开/点击追踪（`/api/<slug>`）。需要的话给 HTML 加点噪声。
+- **邮件** — 多套 SMTP，群发，模板库，定时发送，每个活动单独的打开/点击追踪（`/api/<slug>`）。需要的话给 HTML 加点噪声。
 - **上钩通知** — 飞书 / 企微 / Telegram / Slack / 钉钉 / Discord。通道绑到项目上，有人提交就推「鱼儿上钩」。打开、点击不走这条。
 - **QR** — 稳定地址 `/q/{slug}.png` 出实时二维码。本机脚本只传屏幕帧，页面里放 `{{QR_RELAY_URL}}` / `{{QR_RELAY_IMG}}`。
 - **信息搜集** — 用你自己的 AI 接口（`/responses` + `web_search`）捞公开邮箱/电话，导出 CSV，接着去发信。
@@ -91,14 +91,14 @@ Linux / macOS / Windows。
 - **从源码编：** Go **1.24+**、Node.js（前端）。
 - **Docker 运行模式：** 要有 Docker Engine。只用本机 Flask / Agent 可以不装。
 - **本机 Flask：** `python3`，带 Flask（`flask`、`flask_cors`、`requests`）。
-- **QR 截屏：** Python 3，从 **工作台 → QR 钓鱼** 下 zip（或看 [`scripts/qr-relay`](scripts/qr-relay/README.md)）。macOS 解码需要 `zbar`。
+- **QR 截屏：** Python 3，从 **工作台 → QR 钓鱼** 下 zip（或看 [`scripts/qr-relay/README.zh.md`](scripts/qr-relay/README.zh.md)）。macOS 解码需要 `zbar`。
 - Agent 要能访问主控的 HTTP(S)。
 
 | 用途 | 默认 |
 |------|------|
 | 控制台 / API | `:8000` |
 | 前端开发 | `:8081`，把 `/api` 转到 `:8000` |
-| Agent 上的落地页 | 该主机 `10000–20000/TCP` |
+| Agent 上的落地页 | 该主机 `20000–30000/TCP` |
 
 ### 1. 配置
 
@@ -171,7 +171,7 @@ cat data/admin_password.txt
 
 不想全堆在主控上，就把 **fishing-agent** 丢到别的机器。一个项目可以铺多个点，一台机器也能挂多个项目。每个绑定自己的端口、版本、日志。提交和日志回主控；主控闪一下，Agent 会先攒着再补传。
 
-项目端口默认 **`10000–20000/TCP`**。Agent **主动连出**到主控。访问者打 Agent（反代后面就把对外地址写到 `advertise_host`，见完整手册）。
+项目端口默认 **`20000–30000/TCP`**。Agent **主动连出**到主控。访问者打 Agent（反代后面就把对外地址写到 `advertise_host`，见完整手册）。
 
 **令牌** — 主控 `security.agent_registration_token` 单独设（别拿 JWT 密钥凑），重启。第一次注册用这个共享令牌，之后 `{work_dir}/state.json` 里是这台 Agent 自己的 id/token（Linux/macOS 上 `0600`）。
 
@@ -233,9 +233,9 @@ systemd、Windows 服务、反代：**[docs/agent-deployment.md](docs/agent-depl
 |---|---|
 | 占位符（页面 + 邮件） | [中文](docs/placeholders.zh.md) · [英文](docs/placeholders.en.md) |
 | Agent（systemd、Windows、反代） | [docs/agent-deployment.md](docs/agent-deployment.md) |
-| QR 截屏脚本 | [scripts/qr-relay](scripts/qr-relay/README.md) — 或从 QR 页下 zip |
+| QR 截屏脚本 | [中文](scripts/qr-relay/README.zh.md) · [英文](scripts/qr-relay/README.md) — 或从 QR 页下 zip |
 
-QR：控制台建中继，复制上传 token（只显示一次），写进脚本配置。脚本只传图片帧和心跳。对外地址是 `/q/{slug}.png`。
+QR：控制台建中继，复制上传令牌（只显示一次），写进脚本 `config.yaml`。脚本只传图片帧和心跳。对外地址是 `/q/{slug}.png`。用法见 zip 内 `README.zh.md`，控制台 QR 钓鱼页也有中文步骤。
 
 ---
 

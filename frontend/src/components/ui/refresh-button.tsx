@@ -1,6 +1,6 @@
 "use client";
 
-import { RefreshCw } from "lucide-react";
+import { RiRefreshLine } from "@remixicon/react";
 import { useI18n } from "@/i18n";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -32,7 +32,7 @@ export function RefreshButton({
       title={label}
       className={className}
     >
-      <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+      <RiRefreshLine className={cn("h-4 w-4", loading && "animate-spin")} />
     </Button>
   );
 }

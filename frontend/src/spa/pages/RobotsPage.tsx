@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
-import { Plus } from "lucide-react";
+import { RiAddLine } from "@remixicon/react";
 import { api } from "@/api";
 import { isAdminRole, useAuthStore } from "@/auth/auth-store";
 import { useI18n } from "@/i18n";
@@ -206,7 +206,7 @@ export default function RobotsPage() {
           <p className="text-sm text-slate-500">{t("robot.subtitle")}</p>
         </div>
         <Button onClick={openCreate}>
-          <Plus className="h-4 w-4" />
+          <RiAddLine className="h-4 w-4" />
           {t("robot.newChannel")}
         </Button>
       </div>

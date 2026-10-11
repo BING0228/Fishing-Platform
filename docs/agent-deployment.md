@@ -48,7 +48,7 @@ Fishing Platform Agent 是部署在远程节点上的页面运行程序，由主
 默认项目端口范围为：
 
 ```text
-10000-20000/TCP
+20000-30000/TCP
 ```
 
 如果 Agent 位于反向代理后方，应把 `advertise_host` 配置为访问者实际可达的域名或地址。
@@ -135,7 +135,7 @@ registration_token: replace-with-a-long-random-agent-token
 | `server_url` | 是 | 无 | 主控端地址，不要以 `/` 结尾 |
 | `registration_token` | 首次注册必填 | 无 | 对应主控端 `agent_registration_token` |
 
-Agent 配置文件仅保留上述两个必填项。项目运行端口由主控端从 `10000-20000` 范围内按 Agent 分配，并随部署任务下发，Agent 不再配置或自行选择端口。
+Agent 配置文件仅保留上述两个必填项。项目运行端口由主控端从 `20000-30000` 范围内按 Agent 分配，并随部署任务下发，Agent 不再配置或自行选择端口。
 
 ## 7. 首次启动
 
@@ -370,19 +370,19 @@ Agent -> 主控端 HTTP/HTTPS 端口
 访问者必须能连接 Agent 的项目端口范围：
 
 ```text
-访问者 -> Agent 10000-20000/TCP
+访问者 -> Agent 20000-30000/TCP
 ```
 
 Ubuntu UFW 示例：
 
 ```bash
-sudo ufw allow 10000:20000/tcp
+sudo ufw allow 20000:30000/tcp
 ```
 
 firewalld 示例：
 
 ```bash
-sudo firewall-cmd --permanent --add-port=10000-20000/tcp
+sudo firewall-cmd --permanent --add-port=20000-30000/tcp
 sudo firewall-cmd --reload
 ```
 
@@ -505,7 +505,7 @@ ss -lntp | grep fishing-agent
 同时确认：
 
 - Agent 主机名对访问者可解析、可连接。
-- 项目端口位于主控端分配的 `10000-20000` 范围中。
+- 项目端口位于主控端分配的 `20000-30000` 范围中。
 - 防火墙已放行端口范围。
 - 项目详情页显示的运行地址正确。
 

@@ -305,13 +305,12 @@ func runInfoGatherJob(jobID uint) {
 			continue
 		}
 		findings = append(findings, models.InfoGatherFinding{
-			JobID:      jobID,
-			Kind:       f.Kind,
-			Value:      f.Value,
-			Label:      f.Label,
-			SourceURL:  f.SourceURL,
-			Snippet:    f.Snippet,
-			Confidence: f.Confidence,
+			JobID:     jobID,
+			Kind:      f.Kind,
+			Value:     f.Value,
+			Label:     f.Label,
+			SourceURL: f.SourceURL,
+			Snippet:   f.Snippet,
 		})
 	}
 	finishInfoGatherJob(jobID, status, errMsg, result.RawResponse, findings, result.Notes)

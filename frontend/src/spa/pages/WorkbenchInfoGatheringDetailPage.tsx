@@ -2,7 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Check, Circle, Loader2, X } from "lucide-react";
+import {
+  RiArrowLeftLine,
+  RiCheckLine,
+  RiCircleLine,
+  RiCloseLine,
+  RiLoader4Line,
+} from "@remixicon/react";
 import { api } from "@/api";
 import { useI18n } from "@/i18n";
 import { Badge } from "@/components/ui/badge";
@@ -46,7 +52,6 @@ type InfoGatherFinding = {
   label?: string;
   source_url?: string;
   snippet?: string;
-  confidence?: string;
 };
 
 export default function WorkbenchInfoGatheringDetailPage() {
@@ -174,23 +179,10 @@ export default function WorkbenchInfoGatheringDetailPage() {
     return <Badge variant="secondary">{label}</Badge>;
   };
 
-  const confidenceBadge = (c?: string) => {
-    if (c === "high") return <Badge variant="success">{c}</Badge>;
-    if (c === "low") return <Badge variant="secondary">{c}</Badge>;
-    return <Badge variant="outline">{c || "medium"}</Badge>;
-  };
-
   const exportCsv = () => {
-    const header = [
-      "kind",
-      "value",
-      "label",
-      "source_url",
-      "snippet",
-      "confidence",
-    ];
+    const header = ["kind", "value", "label", "source_url", "snippet"];
     const rows = findings.map((f) =>
-      [f.kind, f.value, f.label || "", f.source_url || "", f.snippet || "", f.confidence || ""]
+      [f.kind, f.value, f.label || "", f.source_url || "", f.snippet || ""]
         .map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
         .join(","),
     );
@@ -286,7 +278,7 @@ export default function WorkbenchInfoGatheringDetailPage() {
           to="/workbench/info-gathering"
           className="mb-1 inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800"
         >
-          <ArrowLeft className="h-3.5 w-3.5" />
+          <RiArrowLeftLine className="h-3.5 w-3.5" />
           {t("workbench.infoGatherBack")}
         </Link>
         <div className="flex flex-wrap items-center gap-2">
@@ -389,13 +381,13 @@ export default function WorkbenchInfoGatheringDetailPage() {
                   <li key={stage} className="flex items-start gap-2 text-sm">
                     <span className="mt-0.5 shrink-0">
                       {status === "done" ? (
-                        <Check className="h-4 w-4 text-emerald-600" />
+                        <RiCheckLine className="h-4 w-4 text-emerald-600" />
                       ) : status === "active" ? (
-                        <Loader2 className="h-4 w-4 animate-spin text-cyan-600" />
+                        <RiLoader4Line className="h-4 w-4 animate-spin text-cyan-600" />
                       ) : status === "failed" ? (
-                        <X className="h-4 w-4 text-red-600" />
+                        <RiCloseLine className="h-4 w-4 text-red-600" />
                       ) : (
-                        <Circle className="h-4 w-4 text-slate-300" />
+                        <RiCircleLine className="h-4 w-4 text-slate-300" />
                       )}
                     </span>
                     <span
@@ -460,13 +452,12 @@ export default function WorkbenchInfoGatheringDetailPage() {
                 <th className="px-4 py-2 font-medium">{t("workbench.infoGatherValue")}</th>
                 <th className="px-4 py-2 font-medium">{t("workbench.infoGatherLabel")}</th>
                 <th className="px-4 py-2 font-medium">{t("workbench.infoGatherSource")}</th>
-                <th className="px-4 py-2 font-medium">{t("workbench.infoGatherConfidence")}</th>
               </tr>
             </thead>
             <tbody>
               {!contactFindings.length ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                  <td colSpan={4} className="px-4 py-8 text-center text-slate-500">
                     {job.status === "running" || job.status === "pending"
                       ? t("workbench.infoGatherProgressWaiting")
                       : t("workbench.infoGatherEmpty")}
@@ -497,7 +488,6 @@ export default function WorkbenchInfoGatheringDetailPage() {
                       "-"
                     )}
                   </td>
-                  <td className="px-4 py-2">{confidenceBadge(f.confidence)}</td>
                 </tr>
               ))}
             </tbody>

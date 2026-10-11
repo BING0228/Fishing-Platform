@@ -35,6 +35,7 @@ func TestDownloadQrRelayScriptZip(t *testing.T) {
 		"scripts/qr-relay/qr_relay.py":         &fstest.MapFile{Data: []byte("print('ok')\n")},
 		"scripts/qr-relay/requirements.txt":    &fstest.MapFile{Data: []byte("requests\n")},
 		"scripts/qr-relay/README.md":           &fstest.MapFile{Data: []byte("# relay\n")},
+		"scripts/qr-relay/README.zh.md":        &fstest.MapFile{Data: []byte("# 中继\n")},
 		"scripts/qr-relay/config.example.yaml": &fstest.MapFile{Data: []byte("platform_url: x\n")},
 	})
 
@@ -69,6 +70,7 @@ func TestDownloadQrRelayScriptZip(t *testing.T) {
 		"qr-relay/qr_relay.py",
 		"qr-relay/requirements.txt",
 		"qr-relay/README.md",
+		"qr-relay/README.zh.md",
 		"qr-relay/config.example.yaml",
 		"qr-relay/config.yaml",
 	} {

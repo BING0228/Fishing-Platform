@@ -1,7 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { Check, ChevronsUpDown, X } from "lucide-react";
+import {
+  RiCheckLine,
+  RiCloseLine,
+  RiExpandUpDownLine,
+} from "@remixicon/react";
 import {
   Popover,
   PopoverContent,
@@ -90,7 +94,7 @@ export function MultiSelect({
                       }
                     }}
                   >
-                    <X className="h-3 w-3" />
+                    <RiCloseLine className="h-3 w-3" />
                   </span>
                 </span>
               ))
@@ -107,10 +111,10 @@ export function MultiSelect({
                   if (e.key === "Enter" || e.key === " ") clear(e as unknown as React.MouseEvent);
                 }}
               >
-                <X className="h-3.5 w-3.5" />
+                <RiCloseLine className="h-3.5 w-3.5" />
               </span>
             ) : null}
-            <ChevronsUpDown className="h-4 w-4 text-slate-400" />
+            <RiExpandUpDownLine className="h-4 w-4 text-slate-400" />
           </div>
         </button>
       </PopoverTrigger>
@@ -139,7 +143,7 @@ export function MultiSelect({
                       : "border-slate-300",
                   )}
                 >
-                  {checked ? <Check className="h-3 w-3" /> : null}
+                  {checked ? <RiCheckLine className="h-3 w-3" /> : null}
                 </span>
                 <span className="truncate">{opt.label}</span>
               </button>

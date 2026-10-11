@@ -2,6 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
   buildAccessUrl,
+  getProjectRuntimeStatus,
   getContainerStatusColor,
   getContainerStatusLabel,
   getBuildStatusColor,
@@ -30,6 +31,73 @@ describe("buildAccessUrl", () => {
   it("defaults port to 6000 when missing", () => {
     const url = buildAccessUrl({ frontend_route: "/app" }, "localhost");
     assert.equal(url, "http://localhost:6000/app");
+  });
+
+  it("prefers a running agent deployment runtime_url over host:port", () => {
+    const url = buildAccessUrl(
+      {
+        use_https: false,
+        port: 20001,
+        frontend_route: "/",
+        deployments: [
+          {
+            actual_status: "running",
+            runtime_url: "http://agent.example.com:20000/",
+          },
+        ],
+      },
+      "control.example.com",
+    );
+    assert.equal(url, "http://agent.example.com:20000");
+  });
+
+  it("falls back to host:port when deployments have no runtime_url", () => {
+    const url = buildAccessUrl(
+      {
+        port: 20001,
+        deployments: [{ actual_status: "pending", runtime_url: "" }],
+      },
+      "control.example.com",
+    );
+    assert.equal(url, "http://control.example.com:20001");
+  });
+});
+
+describe("getProjectRuntimeStatus", () => {
+  it("uses container_status when there are no deployments", () => {
+    assert.equal(
+      getProjectRuntimeStatus({ container_status: "running" }),
+      "running",
+    );
+    assert.equal(
+      getProjectRuntimeStatus({ container_status: "stopped" }),
+      "stopped",
+    );
+  });
+
+  it("prefers running agent deployment over stopped container_status", () => {
+    assert.equal(
+      getProjectRuntimeStatus({
+        container_status: "stopped",
+        deployments: [
+          {
+            actual_status: "running",
+            runtime_url: "http://agent.example.com:20000/",
+          },
+        ],
+      }),
+      "running",
+    );
+  });
+
+  it("maps pending agent deployment to starting", () => {
+    assert.equal(
+      getProjectRuntimeStatus({
+        container_status: "stopped",
+        deployments: [{ actual_status: "pending" }],
+      }),
+      "starting",
+    );
   });
 });
 

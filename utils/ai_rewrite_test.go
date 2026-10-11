@@ -1,6 +1,11 @@
 package utils
 
-import "testing"
+import (
+	"context"
+	"errors"
+	"testing"
+	"time"
+)
 
 func TestBuildMirrorUserPromptIncludesPlatformFields(t *testing.T) {
 	prompt := BuildMirrorUserPrompt(MirrorRewriteInput{
@@ -9,7 +14,7 @@ func TestBuildMirrorUserPromptIncludesPlatformFields(t *testing.T) {
 		RedirectURL:  "https://example.com",
 		OriginalHost: "login.example.com",
 	})
-	for _, want := range []string{"SUBMIT_URL: /api/submit", "username", "password", "captchavalue", "login.example.com"} {
+	for _, want := range []string{"SUBMIT_URL: {{SUBMIT_URL}}", "username", "password", "captchavalue", "login.example.com"} {
 		if !contains(prompt, want) {
 			t.Fatalf("prompt missing %q", want)
 		}
@@ -17,11 +22,11 @@ func TestBuildMirrorUserPromptIncludesPlatformFields(t *testing.T) {
 }
 
 func TestValidateRewrittenHTML(t *testing.T) {
-	okHTML := `<form action="/api/submit" method="post"><input name="username"><input name="password" type="password"></form>`
-	if err := ValidateRewrittenHTML(okHTML, "/api/submit"); err != nil {
+	okHTML := `<form action="{{SUBMIT_URL}}" method="post"><input name="username"><input name="password" type="password"></form>`
+	if err := ValidateRewrittenHTML(okHTML, PlaceholderSubmitURL); err != nil {
 		t.Fatal(err)
 	}
-	if err := ValidateRewrittenHTML(`<form action="/x"><input name="user"></form>`, "/api/submit"); err == nil {
+	if err := ValidateRewrittenHTML(`<form action="/x"><input name="user"></form>`, PlaceholderSubmitURL); err == nil {
 		t.Fatal("expected validation error")
 	}
 }
@@ -37,6 +42,31 @@ func TestStripHeavyBase64DataURIs(t *testing.T) {
 	out := StripHeavyBase64DataURIs(`<img ` + heavy + `>`)
 	if !contains(out, "[STRIPPED_FOR_AI]") {
 		t.Fatalf("not stripped: %s", out)
+	}
+
+	css := `url("data:image/png;base64,` + string(buf) + `")`
+	cssOut := StripHeavyBase64DataURIs(`style="background:` + css + `"`)
+	if !contains(cssOut, "[STRIPPED_FOR_AI]") {
+		t.Fatalf("css data uri not stripped: %s", cssOut)
+	}
+}
+
+func TestAIRewriteTimeout(t *testing.T) {
+	got := AIRewriteTimeout(60*time.Second, 0)
+	if got != 180*time.Second {
+		t.Fatalf("floor: got %s", got)
+	}
+	got = AIRewriteTimeout(60*time.Second, 200*1024)
+	if got != 180*time.Second+200*time.Second {
+		t.Fatalf("size extra: got %s", got)
+	}
+	got = AIRewriteTimeout(8*time.Minute, 0)
+	if got != 8*time.Minute {
+		t.Fatalf("respect larger profile timeout: got %s", got)
+	}
+	got = AIRewriteTimeout(60*time.Second, 20<<20)
+	if got != 10*time.Minute {
+		t.Fatalf("cap: got %s", got)
 	}
 }
 
@@ -76,6 +106,19 @@ func TestExtractAIErrorMessage(t *testing.T) {
 	}
 	if got := extractAIErrorMessage([]byte(`null`)); got != "" {
 		t.Fatalf("null error: %q", got)
+	}
+}
+
+func TestIsTimeoutErr(t *testing.T) {
+	if !isTimeoutErr(context.DeadlineExceeded) {
+		t.Fatal("deadline exceeded should be a timeout")
+	}
+	if isTimeoutErr(errors.New("no credits")) {
+		t.Fatal("unrelated error should not look like a timeout")
+	}
+	err := wrapAIRewriteTransportErr("https://example/chat/completions", time.Minute, 4096, context.DeadlineExceeded)
+	if err == nil || !contains(err.Error(), "timed out") {
+		t.Fatalf("wrap: %v", err)
 	}
 }
 

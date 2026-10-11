@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-import { ShieldBan } from "lucide-react";
+import { RiShieldCrossLine } from "@remixicon/react";
 import { api } from "@/api";
 import { useI18n } from "@/i18n";
 import { RECORDS_POLL_INTERVAL_MS } from "@/utils/projectDetailHelpers";
@@ -287,7 +287,7 @@ export default function ProjectRecords() {
                                 : t("project.addToBlacklist")
                             }
                           >
-                            <ShieldBan className="h-3.5 w-3.5" />
+                            <RiShieldCrossLine className="h-3.5 w-3.5" />
                             {already
                               ? t("project.alreadyBlacklisted")
                               : t("project.addToBlacklist")}

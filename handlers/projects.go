@@ -592,7 +592,26 @@ func saveUploadedHTMLFile(c *gin.Context) (string, error) {
 	}
 	defer file.Close()
 
-	if header.Size > maxHTMLUploadSizeBytes {
+	limit := int64(maxHTMLUploadSizeBytes) + 1
+	if header.Size > 0 && header.Size > maxHTMLUploadSizeBytes {
+		return "", errHTMLFileTooLarge
+	}
+	raw, err := io.ReadAll(io.LimitReader(file, limit))
+	if err != nil {
+		return "", err
+	}
+	if int64(len(raw)) > maxHTMLUploadSizeBytes {
+		return "", errHTMLFileTooLarge
+	}
+	return writePreparedHTMLFile(string(raw))
+}
+
+func writePreparedHTMLFile(html string) (string, error) {
+	prepared := utils.PrepareLandingHTML(html)
+	if strings.TrimSpace(prepared) == "" {
+		return "", errors.New("HTML content is empty")
+	}
+	if len(prepared) > maxHTMLUploadSizeBytes {
 		return "", errHTMLFileTooLarge
 	}
 
@@ -601,21 +620,62 @@ func saveUploadedHTMLFile(c *gin.Context) (string, error) {
 		return "", err
 	}
 
-	ext := filepath.Ext(header.Filename)
-	filename := strconv.FormatInt(time.Now().UnixNano(), 10) + ext
+	filename := strconv.FormatInt(time.Now().UnixNano(), 10) + ".html"
 	filePath := filepath.Join(uploadDir, filename)
-
-	dst, err := os.Create(filePath)
-	if err != nil {
+	if err := os.WriteFile(filePath, []byte(prepared), 0644); err != nil {
 		return "", err
 	}
-	defer dst.Close()
-
-	if _, err := io.Copy(dst, file); err != nil {
-		return "", err
-	}
-
 	return filePath, nil
+}
+
+var errPhishingPageNotFound = errors.New("phishing page not found")
+
+func resolveIncomingProjectHTML(c *gin.Context, db *gorm.DB, user models.User) (string, *models.PhishingPage, error) {
+	filePath, err := saveUploadedHTMLFile(c)
+	if err != nil {
+		return "", nil, err
+	}
+	if filePath != "" {
+		return filePath, nil, nil
+	}
+	pageID := parseOptionalUintString(c.PostForm("phishing_page_id"))
+	if pageID == nil {
+		return "", nil, nil
+	}
+	var page models.PhishingPage
+	if err := scopeByOwner(db, user).First(&page, *pageID).Error; err != nil {
+		return "", nil, errPhishingPageNotFound
+	}
+	path, err := writePreparedHTMLFile(page.Html)
+	if err != nil {
+		return "", nil, err
+	}
+	return path, &page, nil
+}
+
+func applyPhishingPageDefaults(project *models.Project, page *models.PhishingPage) {
+	if project == nil || page == nil {
+		return
+	}
+	if strings.TrimSpace(project.LoginURL) == "" && strings.TrimSpace(page.URL) != "" {
+		project.LoginURL = strings.TrimSpace(page.URL)
+	}
+}
+
+func writeProjectHTMLHTTPError(c *gin.Context, err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, errHTMLFileTooLarge) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "HTML file exceeds the 30MB upload limit"})
+		return true
+	}
+	if errors.Is(err, errPhishingPageNotFound) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Phishing page not found"})
+		return true
+	}
+	c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to save HTML", "details": err.Error()})
+	return true
 }
 
 func saveUploadedCertificateFiles(c *gin.Context) (string, string, error) {
@@ -750,19 +810,17 @@ func CreateProject(c *gin.Context) {
 		}
 	}
 
-	// Handle file upload
-	filePath, err := saveUploadedHTMLFile(c)
-	if err != nil {
-		if errors.Is(err, errHTMLFileTooLarge) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "HTML file exceeds the 30MB upload limit"})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save uploaded HTML", "details": err.Error()})
+	// Handle HTML from upload or Page Builder library.
+	filePath, sourcePage, err := resolveIncomingProjectHTML(c, config.GetDB(), user)
+	if writeProjectHTMLHTTPError(c, err) {
 		return
 	}
-	if filePath != "" {
-		project.HtmlFilePath = filePath
+	if filePath == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "HTML page is required"})
+		return
 	}
+	project.HtmlFilePath = filePath
+	applyPhishingPageDefaults(&project, sourcePage)
 
 	certPath, keyPath, err := saveUploadedCertificateFiles(c)
 	if err != nil {
@@ -929,17 +987,13 @@ func UpdateProject(c *gin.Context) {
 			return
 		}
 
-		filePath, err := saveUploadedHTMLFile(c)
-		if err != nil {
-			if errors.Is(err, errHTMLFileTooLarge) {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "HTML file exceeds the 30MB upload limit"})
-				return
-			}
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save uploaded HTML", "details": err.Error()})
+		filePath, sourcePage, err := resolveIncomingProjectHTML(c, db, user)
+		if writeProjectHTMLHTTPError(c, err) {
 			return
 		}
 		if filePath != "" {
 			project.HtmlFilePath = filePath
+			applyPhishingPageDefaults(&project, sourcePage)
 		}
 
 		certPath, keyPath, err := saveUploadedCertificateFiles(c)

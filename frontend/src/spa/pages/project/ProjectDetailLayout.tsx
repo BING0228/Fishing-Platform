@@ -15,13 +15,17 @@ import {
   useNavigate,
   useParams,
 } from "react-router-dom";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import {
+  RiArrowLeftLine,
+  RiExternalLinkLine,
+} from "@remixicon/react";
 import { api } from "@/api";
 import { useI18n } from "@/i18n";
 import {
   buildAccessUrl,
   getContainerStatusColor,
   getContainerStatusLabel,
+  getProjectRuntimeStatus,
 } from "@/utils/projectDetailHelpers";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,7 +37,12 @@ export type ProjectDetail = ProjectRow & {
   deployment_revision?: number;
   html_file_path?: string;
   robots?: { id: number; name: string }[];
-  deployments?: unknown[];
+  deployments?: {
+    id?: number;
+    runtime_url?: string;
+    actual_status?: string;
+    runtime_port?: number;
+  }[];
 };
 
 type WorkspaceValue = {
@@ -55,6 +64,14 @@ export function useProjectWorkspace() {
 
 const STATUS_I18N: Record<string, string> = {
   running: "project.containerRunning",
+  starting: "project.starting",
+  stopping: "project.stopping",
+  stopped: "project.stopped",
+  unknown: "common.unknown",
+};
+
+const AGENT_STATUS_I18N: Record<string, string> = {
+  running: "project.agentRunning",
   starting: "project.starting",
   stopping: "project.stopping",
   stopped: "project.stopped",
@@ -121,11 +138,16 @@ export default function ProjectDetailLayout() {
     [project],
   );
 
-  const statusLabel = getContainerStatusLabel(project.container_status);
-  const statusText = t(STATUS_I18N[statusLabel] || STATUS_I18N.unknown);
-  const statusVariant = colorToVariant(
-    getContainerStatusColor(project.container_status),
-  );
+  const runtimeStatus = getProjectRuntimeStatus(project);
+  const statusLabel = getContainerStatusLabel(runtimeStatus);
+  const agentHosted =
+    (project.deployments || []).length > 0 ||
+    (project.agent_ids || []).some(
+      (id) => String(id) !== "platform" && Number(id) > 0,
+    );
+  const statusMap = agentHosted ? AGENT_STATUS_I18N : STATUS_I18N;
+  const statusText = t(statusMap[statusLabel] || statusMap.unknown);
+  const statusVariant = colorToVariant(getContainerStatusColor(runtimeStatus));
 
   const value = useMemo(
     () => ({ project, loading, refreshProject, accessUrl }),
@@ -140,7 +162,7 @@ export default function ProjectDetailLayout() {
           className="inline-flex items-center gap-1 text-sm text-slate-600 hover:text-slate-900"
           onClick={() => navigate("/projects")}
         >
-          <ArrowLeft className="h-4 w-4" />
+          <RiArrowLeftLine className="h-4 w-4" />
           {t("project.detailBack")}
         </button>
 
@@ -158,9 +180,14 @@ export default function ProjectDetailLayout() {
               </h1>
               <Badge variant={statusVariant}>{statusText}</Badge>
               <Badge variant="outline">
-                {project.run_mode === "local"
-                  ? t("project.localFlask")
-                  : "Docker"}
+                {(project.deployments || []).length > 0 ||
+                (project.agent_ids || []).some(
+                  (id) => String(id) !== "platform" && Number(id) > 0,
+                )
+                  ? "Agent"
+                  : project.run_mode === "local"
+                    ? t("project.localFlask")
+                    : "Docker"}
               </Badge>
               {project.deployment_revision ? (
                 <Badge variant="secondary">R{project.deployment_revision}</Badge>
@@ -172,10 +199,10 @@ export default function ProjectDetailLayout() {
           </div>
           <div className="flex flex-wrap gap-2">
             <RefreshButton onClick={refreshProject} loading={loading} />
-            {project.container_status === "running" ? (
+            {runtimeStatus === "running" ? (
               <Button variant="outline" size="sm" asChild>
                 <a href={accessUrl} target="_blank" rel="noreferrer">
-                  <ExternalLink className="h-4 w-4" />
+                  <RiExternalLinkLine className="h-4 w-4" />
                   {t("project.openPage")}
                 </a>
               </Button>

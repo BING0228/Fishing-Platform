@@ -2,7 +2,12 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ChevronUp, Download, Plus, QrCode } from "lucide-react";
+import {
+  RiAddLine,
+  RiArrowUpSLine,
+  RiDownloadLine,
+  RiQrCodeLine,
+} from "@remixicon/react";
 import { api } from "@/api";
 import { useI18n } from "@/i18n";
 import { Badge } from "@/components/ui/badge";
@@ -185,7 +190,7 @@ export default function WorkbenchQrPhishingPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="flex items-center gap-2 text-xl font-semibold">
-            <QrCode className="h-5 w-5" />
+            <RiQrCodeLine className="h-5 w-5" />
             {t("workbench.qrPhishing")}
           </h1>
           <p className="text-sm text-slate-500">{t("workbench.qrSubtitle")}</p>
@@ -193,7 +198,7 @@ export default function WorkbenchQrPhishingPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={downloadScript} disabled={downloading}>
-            <Download className="h-4 w-4" />
+            <RiDownloadLine className="h-4 w-4" />
             {downloading
               ? t("workbench.qrDownloading")
               : t("workbench.qrDownloadScript")}
@@ -204,12 +209,12 @@ export default function WorkbenchQrPhishingPage() {
           >
             {formOpen ? (
               <>
-                <ChevronUp className="h-4 w-4" />
+                <RiArrowUpSLine className="h-4 w-4" />
                 {t("workbench.collapseForm")}
               </>
             ) : (
               <>
-                <Plus className="h-4 w-4" />
+                <RiAddLine className="h-4 w-4" />
                 {t("workbench.qrNew")}
               </>
             )}

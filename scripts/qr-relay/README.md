@@ -2,6 +2,8 @@
 
 Local helper for **authorized** QR login/session relay exercises.
 
+中文说明见 [README.zh.md](README.zh.md)。
+
 Preferred: download `fishing-qr-relay.zip` from **Workbench → QR Phishing** in the platform UI (includes `config.yaml` template).
 
 1. Create a relay in **Workbench → QR Phishing** and copy the **upload token** (shown once).
