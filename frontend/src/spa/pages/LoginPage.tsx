@@ -124,7 +124,7 @@ export default function LoginPage() {
             <div className="relative hidden bg-muted md:block">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/login-cover.jpg"
+                src={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/login-cover.jpg`}
                 alt=""
                 className="absolute inset-0 h-full w-full object-cover"
               />
