@@ -34,7 +34,9 @@ import SmtpServicesPage from "@/spa/pages/SmtpServicesPage";
 import AuditLogsPage from "@/spa/pages/AuditLogsPage";
 import UsersPage from "@/spa/pages/UsersPage";
 import AiSettingsPage from "@/spa/pages/AiSettingsPage";
+import SearchSettingsPage from "@/spa/pages/SearchSettingsPage";
 import MailTrackingSettingsPage from "@/spa/pages/MailTrackingSettingsPage";
+import ChatPage from "@/spa/pages/ChatPage";
 
 function RequireAuth() {
   const token = useAuthStore((s) => s.token);
@@ -115,7 +117,7 @@ function PublicOnly({ children }: { children: React.ReactNode }) {
 
 export default function SpaApp() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={process.env.NEXT_PUBLIC_BASE_PATH || undefined}>
       <Routes>
         <Route
           path="/login"
@@ -127,6 +129,7 @@ export default function SpaApp() {
         />
         <Route element={<RequireAuth />}>
           <Route path="/" element={<DashboardPage />} />
+          <Route path="/chat" element={<ChatPage />} />
           <Route path="/workbench" element={<Navigate to="/workbench/mail" replace />} />
           <Route path="/workbench/mail" element={<WorkbenchMailPage />} />
           <Route path="/workbench/mail/:id" element={<WorkbenchMailDetailPage />} />
@@ -161,6 +164,7 @@ export default function SpaApp() {
             <Route path="/audit-logs" element={<AuditLogsPage />} />
             <Route path="/users" element={<UsersPage />} />
             <Route path="/ai-settings" element={<AiSettingsPage />} />
+            <Route path="/search-settings" element={<SearchSettingsPage />} />
             <Route path="/mail-tracking" element={<MailTrackingSettingsPage />} />
           </Route>
         </Route>

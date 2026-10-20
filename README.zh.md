@@ -20,6 +20,7 @@
 </p>
 
 <p align="center">
+  <a href="https://p1temax.github.io/Spearhook/">在线演示</a> ·
   <a href="#法律声明">法律声明</a> ·
   <a href="#项目简介">项目简介</a> ·
   <a href="#核心能力">核心能力</a> ·
@@ -48,7 +49,7 @@ Spearhook 仅限用于获得明确授权的安全测试、红队演练与钓鱼�
 
 若熟悉 [Gophish](https://github.com/gophish/gophish)：其侧重于活动与模板管理；Spearhook 则面向演练全流程，提供带 AI 镜像的页面库、AI 助手运维、多 Agent 部署、实时 QR 中继、AI 公开信息搜集、Webhook、IP 黑名单、审计与角色管理。
 
-单一 Go 二进制内嵌前端（`frontend/dist`），在同一端口提供 API 与控制台。技术栈：Go 1.24 / Gin / GORM+SQLite / Next.js 静态导出 / 可选 Docker SDK。
+单一 Go 二进制内嵌前端（`frontend/dist`），在同一端口提供 API 与控制台。技术栈：Go 1.24 / Gin / GORM+SQLite / Next.js 静态导出 / 可选 Docker SDK。使用生产前端与 mock 数据构建的只读演示站：[在线演示](https://p1temax.github.io/Spearhook/)。
 
 ---
 

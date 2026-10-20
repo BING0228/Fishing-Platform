@@ -1,6 +1,7 @@
 "use client";
 
 import { create } from "zustand";
+import { DEMO_MODE, DEMO_TOKEN, DEMO_USER } from "@/demo/config";
 
 const TOKEN_KEY = "token";
 const USER_KEY = "user";
@@ -52,8 +53,8 @@ function readStoredUser(): AuthUser | null {
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  token: null,
-  user: null,
+  token: DEMO_MODE ? DEMO_TOKEN : null,
+  user: DEMO_MODE ? DEMO_USER : null,
   setAuth: (token, user = null) => {
     if (typeof window !== "undefined") {
       if (token) localStorage.setItem(TOKEN_KEY, token);
@@ -79,6 +80,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ user: normalized });
   },
   logout: () => {
+    if (DEMO_MODE) {
+      set({ token: DEMO_TOKEN, user: DEMO_USER });
+      return;
+    }
     if (typeof window !== "undefined") {
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem(USER_KEY);
@@ -87,6 +92,12 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
   hydrate: () => {
     if (typeof window === "undefined") return;
+    if (DEMO_MODE) {
+      localStorage.setItem(TOKEN_KEY, DEMO_TOKEN);
+      localStorage.setItem(USER_KEY, JSON.stringify(DEMO_USER));
+      set({ token: DEMO_TOKEN, user: DEMO_USER });
+      return;
+    }
     set({
       token: localStorage.getItem(TOKEN_KEY),
       user: readStoredUser(),

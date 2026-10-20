@@ -43,3 +43,6 @@ next-env.d.ts
 # Next.js auto-generated agent instruction files
 AGENTS.md
 CLAUDE.md
+
+# static demo build output
+/demo-dist/

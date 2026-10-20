@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const enableExport = process.env.NEXT_OUTPUT_EXPORT === "1";
+const demoBuild = process.env.NEXT_PUBLIC_DEMO_MODE === "1";
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 const apiProxyTarget =
   process.env.FISHING_API_PROXY || "http://127.0.0.1:8000";
 
@@ -10,6 +12,12 @@ const apiProxyTarget =
  * same-origin (avoids CORS / cross-origin auth redirect issues).
  */
 const nextConfig: NextConfig = {
+  ...(basePath
+    ? {
+        basePath,
+        assetPrefix: basePath,
+      }
+    : {}),
   ...(enableExport
     ? {
         output: "export" as const,
@@ -34,10 +42,10 @@ const nextConfig: NextConfig = {
           };
         },
       }),
-  trailingSlash: false,
+  trailingSlash: demoBuild,
   // Keep /api/.../ paths intact so Next does not 308-strip the slash
   // (308 on POST drops the body and breaks login / authenticated APIs).
-  skipTrailingSlashRedirect: true,
+  skipTrailingSlashRedirect: !demoBuild,
   allowedDevOrigins: ["127.0.0.1", "localhost"],
 };
 

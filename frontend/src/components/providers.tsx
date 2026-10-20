@@ -2,6 +2,8 @@
 
 import { useEffect, type ReactNode } from "react";
 import { I18nProvider } from "@/i18n";
+import { DEMO_MODE } from "@/demo/config";
+import { DemoBanner } from "@/demo/demo-banner";
 import { useAuthStore } from "@/auth/auth-store";
 
 function AuthHydrator({ children }: { children: ReactNode }) {
@@ -16,6 +18,7 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <I18nProvider>
       <AuthHydrator>{children}</AuthHydrator>
+      {DEMO_MODE ? <DemoBanner /> : null}
     </I18nProvider>
   );
 }

@@ -1,4 +1,6 @@
 import { apiClient } from "./client";
+import { DEMO_MODE } from "@/demo/config";
+import { streamDemoChat, streamDemoEvents } from "@/demo/mock";
 
 export const api = {
   login(data: { username: string; password: string }) {
@@ -150,12 +152,44 @@ export const api = {
   },
   testAiSettings(data: {
     id?: string;
+    api_format?: string;
     base_url?: string;
     api_key?: string;
     model?: string;
     timeout_sec?: number;
   }) {
     return apiClient.post("/api/ai-settings/test/", data, { timeout: 120000 });
+  },
+
+  // Web search provider settings (admin)
+  getSearchSettings() {
+    return apiClient.get("/api/search-settings/");
+  },
+  updateSearchSettings(data: unknown) {
+    return apiClient.put("/api/search-settings/", data);
+  },
+  testSearchSettings(data: {
+    id?: string;
+    provider?: string;
+    base_url?: string;
+    api_key?: string;
+    count?: number;
+  }) {
+    return apiClient.post("/api/search-settings/test/", data, { timeout: 120000 });
+  },
+
+  // Chat console
+  listChatSessions() {
+    return apiClient.get("/api/chat/sessions/");
+  },
+  createChatSession() {
+    return apiClient.post("/api/chat/sessions/");
+  },
+  getChatMessages(id: number | string) {
+    return apiClient.get(`/api/chat/sessions/${id}/messages/`);
+  },
+  deleteChatSession(id: number | string) {
+    return apiClient.delete(`/api/chat/sessions/${id}/`);
   },
   getMailTrackingSettings() {
     return apiClient.get("/api/mail-tracking-settings/");
@@ -315,3 +349,164 @@ export const api = {
 
 
 export default api;
+
+
+export type ChatSSEEvent =
+  | { event: "token"; data: { content?: string } }
+  | {
+      event: "thinking";
+      data: { phase?: string; message?: string };
+    }
+  | { event: "tool_start"; data: { tool_call_id?: string; name?: string; arguments?: string } }
+  | {
+      event: "tool_result";
+      data: {
+        tool_call_id?: string;
+        name?: string;
+        ok?: boolean;
+        summary?: string;
+        error?: string;
+        result?: unknown;
+        links?: { label: string; href: string }[];
+        ephemeral?: Record<string, unknown>;
+      };
+    }
+  | {
+      event: "confirm_required";
+      data: {
+        tool_call_id?: string;
+        name?: string;
+        arguments?: unknown;
+        message?: string;
+        risk?: string;
+      };
+    }
+  | {
+      event: "progress";
+      data: {
+        tool_call_id?: string;
+        stage?: string;
+        percent?: number;
+        message?: string;
+      };
+    }
+  | {
+      event: "job_progress" | "job_done";
+      data: {
+        job_id?: number;
+        status?: string;
+        stage?: string;
+        percent?: number;
+        message?: string;
+        email_count?: number;
+        phone_count?: number;
+        finding_count?: number;
+        link?: string;
+      };
+    }
+  | { event: "ready" | "ping"; data: Record<string, unknown> }
+  | { event: "done"; data: Record<string, unknown> }
+  | { event: "error"; data: { error?: string } };
+
+async function readSSEBody(
+  res: Response,
+  onEvent: (ev: ChatSSEEvent) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  if (!res.body) throw new Error("empty response body");
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  while (true) {
+    if (signal?.aborted) {
+      try {
+        await reader.cancel();
+      } catch {
+        /* ignore */
+      }
+      throw new DOMException("Aborted", "AbortError");
+    }
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const chunks = buffer.split("\n\n");
+    buffer = chunks.pop() || "";
+    for (const chunk of chunks) {
+      const lines = chunk.split("\n");
+      let eventName = "message";
+      let data = "";
+      for (const line of lines) {
+        if (line.startsWith("event:")) eventName = line.slice(6).trim();
+        if (line.startsWith("data:")) data += line.slice(5).trim();
+      }
+      if (!data) continue;
+      try {
+        onEvent({ event: eventName as ChatSSEEvent["event"], data: JSON.parse(data) } as ChatSSEEvent);
+      } catch {
+        /* ignore malformed */
+      }
+    }
+  }
+}
+
+function sseError(res: Response): Promise<Error> | Error {
+  return (async () => {
+    let msg = `HTTP ${res.status}`;
+    try {
+      const j = await res.json();
+      if (j?.error) msg = String(j.error);
+    } catch {
+      /* ignore */
+    }
+    return new Error(msg);
+  })();
+}
+
+export async function streamChatRequest(
+  url: string,
+  body: unknown,
+  onEvent: (ev: ChatSSEEvent) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  if (DEMO_MODE) {
+    await streamDemoChat(onEvent as (event: { event: string; data: Record<string, unknown> }) => void, signal);
+    return;
+  }
+  const token =
+    typeof window !== "undefined" ? localStorage.getItem("token") || "" : "";
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE || ""}${url}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body ?? {}),
+    signal,
+  });
+  if (!res.ok) throw await sseError(res);
+  await readSSEBody(res, onEvent, signal);
+}
+
+/** Long-lived GET stream for async job events in one session. */
+export async function streamChatEvents(
+  url: string,
+  onEvent: (ev: ChatSSEEvent) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  if (DEMO_MODE) {
+    await streamDemoEvents(onEvent as (event: { event: string; data: Record<string, unknown> }) => void, signal);
+    return;
+  }
+  const token =
+    typeof window !== "undefined" ? localStorage.getItem("token") || "" : "";
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE || ""}${url}`, {
+    method: "GET",
+    headers: {
+      Accept: "text/event-stream",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    signal,
+  });
+  if (!res.ok) throw await sseError(res);
+  await readSSEBody(res, onEvent, signal);
+}
