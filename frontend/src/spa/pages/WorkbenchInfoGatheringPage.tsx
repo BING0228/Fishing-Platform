@@ -30,7 +30,7 @@ type InfoGatherJob = {
 };
 
 export default function WorkbenchInfoGatheringPage() {
-  const { t, locale } = useI18n();
+  const { t, dateLocale } = useI18n();
   const navigate = useNavigate();
   const [jobs, setJobs] = useState<InfoGatherJob[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,7 +71,7 @@ export default function WorkbenchInfoGatheringPage() {
 
   const formatTime = (value?: string) => {
     if (!value) return "-";
-    return new Date(value).toLocaleString(locale === "zh" ? "zh-CN" : "en-US");
+    return new Date(value).toLocaleString(dateLocale);
   };
 
   const statusBadge = (status: string) => {
@@ -292,7 +292,7 @@ export default function WorkbenchInfoGatheringPage() {
                   <td className="px-4 py-2">
                     <div className="font-medium text-slate-800">{job.target}</div>
                     {job.include_x_search ? (
-                      <div className="text-xs text-slate-400">X search</div>
+                      <div className="text-xs text-slate-400">{t("workbench.xSearch")}</div>
                     ) : null}
                   </td>
                   <td className="px-4 py-2">{statusBadge(job.status)}</td>

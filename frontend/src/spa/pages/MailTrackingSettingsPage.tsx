@@ -1,9 +1,10 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
-import { RiLink } from "@remixicon/react";
+import { RiLink, RiMailLine } from "@remixicon/react";
 import { api } from "@/api";
 import { useI18n } from "@/i18n";
+import { SettingsTabs } from "@/components/layout/settings-tabs";
 import { Button } from "@/components/ui/button";
 import { RefreshButton } from "@/components/ui/refresh-button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -98,6 +99,12 @@ export default function MailTrackingSettingsPage() {
 
   return (
     <div className="space-y-4 p-4 md:p-6">
+      <SettingsTabs
+        tabs={[
+          { href: "/smtp-services", label: t("nav.smtpServices"), icon: RiMailLine },
+          { href: "/mail-tracking", label: t("nav.mailTracking"), adminOnly: true, icon: RiLink },
+        ]}
+      />
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="flex items-center gap-2 text-xl font-semibold">

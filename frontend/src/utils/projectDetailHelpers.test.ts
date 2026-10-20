@@ -28,9 +28,9 @@ describe("buildAccessUrl", () => {
     assert.equal(url, "https://phish.local:8443/login");
   });
 
-  it("defaults port to 6000 when missing", () => {
+  it("defaults port to 8080 when missing", () => {
     const url = buildAccessUrl({ frontend_route: "/app" }, "localhost");
-    assert.equal(url, "http://localhost:6000/app");
+    assert.equal(url, "http://localhost:8080/app");
   });
 
   it("prefers a running agent deployment runtime_url over host:port", () => {

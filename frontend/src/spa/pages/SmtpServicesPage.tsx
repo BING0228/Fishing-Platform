@@ -3,11 +3,13 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import {
   RiAddLine,
+  RiLink,
   RiMailLine,
 } from "@remixicon/react";
 import { api } from "@/api";
 import { isAdminRole, useAuthStore } from "@/auth/auth-store";
 import { useI18n } from "@/i18n";
+import { SettingsTabs } from "@/components/layout/settings-tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -250,7 +252,7 @@ export default function SmtpServicesPage() {
     setMailForm({
       ...emptyMailForm(),
       subject:
-        mode === "test" ? "Fishing Platform SMTP test" : "",
+        mode === "test" ? "Spearhook SMTP test" : "",
       body:
         mode === "test"
           ? `This is a test email from SMTP service "${record.name}".`
@@ -312,6 +314,12 @@ export default function SmtpServicesPage() {
 
   return (
     <div className="space-y-4 p-4 md:p-6">
+      <SettingsTabs
+        tabs={[
+          { href: "/smtp-services", label: t("nav.smtpServices"), icon: RiMailLine },
+          { href: "/mail-tracking", label: t("nav.mailTracking"), adminOnly: true, icon: RiLink },
+        ]}
+      />
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="flex items-center gap-2 text-xl font-semibold">
@@ -387,7 +395,7 @@ export default function SmtpServicesPage() {
                       ) : item.use_tls ? (
                         <Badge variant="secondary">STARTTLS</Badge>
                       ) : (
-                        <Badge variant="outline">Plain</Badge>
+                        <Badge variant="outline">{t("smtp.plain")}</Badge>
                       )}
                     </td>
                     <td className="px-4 py-3">

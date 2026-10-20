@@ -61,7 +61,7 @@ function healthLabel(health: string | undefined, t: (key: string) => string) {
 }
 
 export default function WorkbenchQrPhishingPage() {
-  const { t, locale } = useI18n();
+  const { t, dateLocale } = useI18n();
   const navigate = useNavigate();
   const [rows, setRows] = useState<QrRelay[]>([]);
   const [loading, setLoading] = useState(true);
@@ -98,7 +98,7 @@ export default function WorkbenchQrPhishingPage() {
 
   const formatTime = (value?: string) => {
     if (!value) return "-";
-    return new Date(value).toLocaleString(locale === "zh" ? "zh-CN" : "en-US");
+    return new Date(value).toLocaleString(dateLocale);
   };
 
   const onSubmit = async (e: FormEvent) => {

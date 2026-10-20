@@ -23,7 +23,7 @@ export default function ProjectLogs() {
   const { project } = useProjectWorkspace();
   const { id } = useParams();
   const [searchParams] = useSearchParams();
-  const { t } = useI18n();
+  const { t, dateLocale } = useI18n();
   const deploymentFilter = searchParams.get("deployment_id");
 
   const [source, setSource] = useState<"runtime" | "agent">(
@@ -154,7 +154,7 @@ export default function ProjectLogs() {
                     <tr key={row.id} className="border-b last:border-0 align-top">
                       <td className="px-4 py-3 whitespace-nowrap">
                         {row.logged_at
-                          ? new Date(row.logged_at).toLocaleString()
+                          ? new Date(row.logged_at).toLocaleString(dateLocale)
                           : "-"}
                       </td>
                       <td className="px-4 py-3">{row.agent_id ?? "-"}</td>

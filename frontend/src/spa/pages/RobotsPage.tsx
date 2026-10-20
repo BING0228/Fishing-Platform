@@ -1,10 +1,11 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
-import { RiAddLine } from "@remixicon/react";
+import { RiAddLine, RiNodeTree, RiRobot2Line } from "@remixicon/react";
 import { api } from "@/api";
 import { isAdminRole, useAuthStore } from "@/auth/auth-store";
 import { useI18n } from "@/i18n";
+import { SettingsTabs } from "@/components/layout/settings-tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -200,6 +201,12 @@ export default function RobotsPage() {
 
   return (
     <div className="space-y-4 p-4 md:p-6">
+      <SettingsTabs
+        tabs={[
+          { href: "/agents", label: t("nav.agents"), icon: RiNodeTree },
+          { href: "/robots", label: t("nav.robots"), icon: RiRobot2Line },
+        ]}
+      />
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold">{t("nav.robots")}</h1>

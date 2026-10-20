@@ -41,7 +41,7 @@ type BlacklistEntry = {
 export default function ProjectRecords() {
   const { project } = useProjectWorkspace();
   const { id } = useParams();
-  const { t } = useI18n();
+  const { t, dateLocale } = useI18n();
   const [rows, setRows] = useState<CredentialRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [keyword, setKeyword] = useState("");
@@ -109,7 +109,7 @@ export default function ProjectRecords() {
     );
   }, [rows, keyword]);
 
-  const format = (v?: string) => (v ? new Date(v).toLocaleString() : "-");
+  const format = (v?: string) => (v ? new Date(v).toLocaleString(dateLocale) : "-");
 
   const exportCsv = () => {
     if (!filtered.length) {

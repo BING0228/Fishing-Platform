@@ -138,7 +138,7 @@ async function openQrRelayEventStream(
 
 export default function WorkbenchQrPhishingDetailPage() {
   const { id } = useParams();
-  const { t, locale } = useI18n();
+  const { t, dateLocale } = useI18n();
   const navigate = useNavigate();
   const [row, setRow] = useState<QrRelay | null>(null);
   const [frames, setFrames] = useState<QrFrame[]>([]);
@@ -208,7 +208,7 @@ export default function WorkbenchQrPhishingDetailPage() {
 
   const formatTime = (value?: string) => {
     if (!value) return "-";
-    return new Date(value).toLocaleString(locale === "zh" ? "zh-CN" : "en-US");
+    return new Date(value).toLocaleString(dateLocale);
   };
 
   const previewSrc = useMemo(() => {
@@ -465,7 +465,7 @@ export default function WorkbenchQrPhishingDetailPage() {
             </div>
             {row.payload ? (
               <div className="flex justify-between gap-4">
-                <span className="text-slate-500">Payload</span>
+                <span className="text-slate-500">{t("workbench.payload")}</span>
                 <code className="max-w-[70%] break-all text-right text-xs">
                   {row.payload}
                 </code>

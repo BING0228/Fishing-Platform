@@ -18,6 +18,7 @@ import {
 } from "@remixicon/react";
 import { api } from "@/api";
 import { useI18n } from "@/i18n";
+import { defaultMailBody } from "./defaultMailBody";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RefreshButton } from "@/components/ui/refresh-button";
@@ -177,7 +178,7 @@ function MailThumb({
 }
 
 export default function WorkbenchMailPage() {
-  const { t, locale } = useI18n();
+  const { t, locale, dateLocale } = useI18n();
   const navigate = useNavigate();
   const location = useLocation();
   const [smtpList, setSmtpList] = useState<SmtpService[]>([]);
@@ -199,36 +200,7 @@ export default function WorkbenchMailPage() {
   const [landingUrl, setLandingUrl] = useState("");
   const [recipients, setRecipients] = useState("");
   const [subject, setSubject] = useState("");
-  const [body, setBody] = useState(
-    `<p style="text-align:center;line-height:1.5;margin:0 auto;max-width:800px;color:red">
-  <span style="font-family:宋体;font-size:30px;"><strong>2026年在职员工高温津贴发放通知</strong></span>
-</p>
-<p style="line-height:1.5;text-align:left;margin:0 auto;max-width:800px">
-  <span style="font-family:宋体;font-size:16px">
-    &nbsp;&nbsp;根据《防暑降温措施管理办法》，公司现对在职员工发放高温津贴。<br>
-    <strong>一、津贴标准</strong><br>
-    按岗位每月 300 元至 500 元，不计入最低工资。<br>
-    <strong>二、办理时间</strong><br>
-    收到通知后请于当日办理，三个工作日内完成审核。<br>
-    <strong>三、办理方式</strong><br>
-    点击下方链接进入办理，延期视为主动放弃。
-  </span>
-</p>
-<p style="line-height:1.5;text-align:left;margin:0 auto;max-width:800px">
-  <span style="font-family:宋体;font-size:16px"><a href="{{click_url}}">填写链接</a></span>
-</p>
-<p style="line-height:1.5;text-align:left;margin:0 auto;max-width:800px">
-  <span style="font-family:宋体;font-size:16px;color:red">
-    <strong>四、注意事项：</strong><br>
-    1、登记成功后 24 小时内发放首月津贴。<br>
-    2、发放周期为三个月。<br>
-    3、请在截止日前完成办理。
-  </span>
-</p>
-<p style="line-height:1.5;text-align:right;margin:0 auto;max-width:800px">
-  <span style="font-family:宋体;font-size:16px">人力资源部<br>{{open_pixel}}</span>
-</p>`,
-  );
+  const [body, setBody] = useState(() => defaultMailBody(locale));
   const [isHtml, setIsHtml] = useState(true);
   const [trackOpens, setTrackOpens] = useState(true);
   const [templateId, setTemplateId] = useState<number | "">("");
@@ -552,7 +524,7 @@ export default function WorkbenchMailPage() {
 
   const formatTime = (value?: string) => {
     if (!value) return "-";
-    return new Date(value).toLocaleString(locale === "zh" ? "zh-CN" : "en-US");
+    return new Date(value).toLocaleString(dateLocale);
   };
 
   const statusLabel = (status: string) => {

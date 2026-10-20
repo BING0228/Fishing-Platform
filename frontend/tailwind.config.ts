@@ -10,6 +10,17 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        brand: [
+          "var(--font-brand-mono)",
+          "ui-monospace",
+          "SFMono-Regular",
+          "Menlo",
+          "Monaco",
+          "Consolas",
+          "monospace",
+        ],
+      },
       colors: {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
@@ -57,13 +68,13 @@ export default {
       },
       borderRadius: {
         none: "0px",
-        sm: "2px",
-        DEFAULT: "2px",
-        md: "2px",
-        lg: "3px",
-        xl: "3px",
-        "2xl": "4px",
-        "3xl": "4px",
+        sm: "4px",
+        DEFAULT: "4px",
+        md: "6px",
+        lg: "8px",
+        xl: "8px",
+        "2xl": "10px",
+        "3xl": "10px",
       },
     },
   },

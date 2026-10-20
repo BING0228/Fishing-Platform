@@ -93,9 +93,9 @@ function toPercent(value?: number): number | null {
   return Number(Number(value).toFixed(1));
 }
 
-function formatSampleLabel(ts: number, locale: string, spanMs: number) {
+function formatSampleLabel(ts: number, dateLocale: string, spanMs: number) {
   const date = new Date(ts);
-  const loc = locale === "zh" ? "zh-CN" : "en-US";
+  const loc = dateLocale;
   if (spanMs > 6 * 60 * 60 * 1000) {
     return date.toLocaleString(loc, {
       month: "2-digit",
@@ -115,7 +115,7 @@ function formatSampleLabel(ts: number, locale: string, spanMs: number) {
 
 function mapPersistedSamples(
   rows: HostMetricSampleRow[],
-  locale: string,
+  dateLocale: string,
 ): MetricSample[] {
   const parsed = rows
     .map((row) => {
@@ -132,7 +132,7 @@ function mapPersistedSamples(
   const spanMs = parsed[parsed.length - 1].ts - parsed[0].ts;
   return parsed.map((row) => ({
     ts: row.ts,
-    label: formatSampleLabel(row.ts, locale, spanMs),
+    label: formatSampleLabel(row.ts, dateLocale, spanMs),
     cpu: row.cpu,
     memory: row.memory,
   }));
@@ -231,7 +231,7 @@ function MetricLineChart({
 }
 
 export default function DashboardPage() {
-  const { t, locale } = useI18n();
+  const { t, dateLocale } = useI18n();
   const [stats, setStats] = useState<DashboardStats>(emptyStats);
   const [samples, setSamples] = useState<MetricSample[]>([]);
   const [loading, setLoading] = useState(true);
@@ -250,7 +250,7 @@ export default function DashboardPage() {
       }));
       const persisted = mapPersistedSamples(
         Array.isArray(data.hostMetricSamples) ? data.hostMetricSamples : [],
-        locale,
+        dateLocale,
       );
       // If history is still sparse right after boot, append the live point.
       if (persisted.length < 2 && hostMetrics.collected_at) {
@@ -262,7 +262,7 @@ export default function DashboardPage() {
               memory_usage_percent: hostMetrics.memory_usage_percent,
             },
           ],
-          locale,
+          dateLocale,
         );
         const merged = [...persisted];
         for (const point of live) {
@@ -280,7 +280,7 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [locale, t]);
+  }, [dateLocale, t]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -290,7 +290,7 @@ export default function DashboardPage() {
 
   const formatTime = (time?: string) => {
     if (!time) return "-";
-    return new Date(time).toLocaleString(locale === "zh" ? "zh-CN" : "en-US");
+    return new Date(time).toLocaleString(dateLocale);
   };
 
   const formatPercent = (value?: number) => {
@@ -402,7 +402,7 @@ export default function DashboardPage() {
             <CardAction>
               <Badge variant="outline" className="gap-1">
                 <RiMailLine className="h-3.5 w-3.5" />
-                Mail
+                {t("dashboard.mailBadge")}
               </Badge>
             </CardAction>
           </CardHeader>
@@ -422,7 +422,7 @@ export default function DashboardPage() {
             <CardAction>
               <Badge variant="outline" className="gap-1">
                 <RiChat1Line className="h-3.5 w-3.5" />
-                Msg
+                {t("dashboard.msgBadge")}
               </Badge>
             </CardAction>
           </CardHeader>
@@ -469,13 +469,11 @@ export default function DashboardPage() {
       {hasHost ? (
         <Card className="mx-4 flex min-h-0 flex-1 flex-col overflow-hidden lg:mx-6">
           <CardHeader className="shrink-0 gap-1 border-b py-4">
-            <CardDescription>{t("dashboard.hostStatus")}</CardDescription>
             <CardTitle className="text-base">
               {t("dashboard.performanceTrend")}
             </CardTitle>
             <div className="text-xs text-muted-foreground">
               {t("dashboard.collectedAt")}：{formatTime(hm.collected_at)} ·{" "}
-              {t("dashboard.host")}：{hm.hostname || "-"} ·{" "}
               {t("dashboard.system")}：{formatOS(hm.os, hm.arch)} ·{" "}
               {t("dashboard.uptime")}：{formatUptime(hm.uptime_seconds)}
             </div>

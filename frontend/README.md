@@ -1,4 +1,4 @@
-# Fishing Platform Frontend (React)
+# Spearhook Frontend (React)
 
 International stack:
 
@@ -6,7 +6,7 @@ International stack:
 - **Next.js** (App Router) with **`output: 'export'`** for static files embedded by Go
 - **React Router** for in-app SPA routes (deep links work via Go `NoRoute` → `index.html`)
 - **Tailwind CSS** + **shadcn/ui**-style Radix components
-- **axios** / **zustand** / lightweight i18n (en/zh)
+- **axios** / **zustand** / lightweight i18n (English source + zh-CN, zh-TW, ja, ko)
 
 ## Develop
 
@@ -24,10 +24,3 @@ npm run build   # writes frontend/dist (used by //go:embed frontend/dist)
 ```
 
 `build-all.sh` still runs `npm run build` then embeds `frontend/dist`.
-
-## Vue backup
-
-Pre-migration Vue sources:
-
-- `frontend-backups/frontend-vue-before-react-*`
-- `frontend-vue-superseded/` (last live Vue tree before cutover)

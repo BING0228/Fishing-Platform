@@ -6,6 +6,7 @@ export function generateStaticParams() {
   return [
     { slug: [] },
     { slug: ["login"] },
+    { slug: ["chat"] },
     { slug: ["workbench"] },
     { slug: ["workbench", "mail"] },
     { slug: ["workbench", "mail-templates"] },

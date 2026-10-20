@@ -10,11 +10,17 @@ import {
   type ReactNode,
 } from "react";
 import messages from "./messages.json";
+import {
+  DEFAULT_LOCALE,
+  getLocale,
+  isLocale,
+  resolveLocale,
+  type LocaleCode,
+} from "./locales";
 
-type Locale = "en" | "zh";
 type Dict = Record<string, unknown>;
 
-const STORAGE_KEY = "fishing-platform-locale";
+const STORAGE_KEY = "spearhook-locale";
 
 function getByPath(obj: Dict, path: string): unknown {
   return path.split(".").reduce<unknown>((acc, key) => {
@@ -32,32 +38,65 @@ function interpolate(template: string, vars?: Record<string, string | number>) {
   );
 }
 
+function readStoredLocale(): string | null {
+  try {
+    return window.localStorage.getItem(STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function detectLocale(): LocaleCode {
+  const stored = readStoredLocale();
+  if (stored) return resolveLocale([stored]);
+  const languages =
+    Array.isArray(navigator.languages) && navigator.languages.length > 0
+      ? navigator.languages
+      : [navigator.language];
+  return resolveLocale(languages);
+}
+
 type I18nContextValue = {
-  locale: Locale;
-  setLocale: (locale: Locale) => void;
+  locale: LocaleCode;
+  setLocale: (locale: LocaleCode) => void;
   t: (key: string, vars?: Record<string, string | number>) => string;
+  dateLocale: string;
 };
 
 const I18nContext = createContext<I18nContextValue | null>(null);
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>("en");
+  // Render English first so SSR, static export, and the first client paint are
+  // deterministic. The effect below then applies the stored/browser locale.
+  const [locale, setLocaleState] = useState<LocaleCode>(DEFAULT_LOCALE);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (stored === "en" || stored === "zh") setLocaleState(stored);
+    setLocaleState(detectLocale());
   }, []);
 
-  const setLocale = useCallback((next: Locale) => {
+  const setLocale = useCallback((next: LocaleCode) => {
+    if (!isLocale(next)) return;
     setLocaleState(next);
-    window.localStorage.setItem(STORAGE_KEY, next);
+    try {
+      window.localStorage.setItem(STORAGE_KEY, next);
+    } catch {
+      // Private browsing / storage-disabled contexts still switch for this tab.
+    }
   }, []);
+
+  const meta = getLocale(locale);
+
+  useEffect(() => {
+    document.documentElement.lang = meta.htmlLang;
+    document.documentElement.dir = "ltr";
+  }, [meta.htmlLang]);
 
   const t = useCallback(
     (key: string, vars?: Record<string, string | number>) => {
-      const table = (messages as Record<Locale, Dict>)[locale] || messages.en;
-      const value = getByPath(table as Dict, key);
+      const table = (messages as Record<string, Dict>)[locale];
+      const value = table ? getByPath(table, key) : undefined;
       if (typeof value === "string") return interpolate(value, vars);
+      // English is the canonical source and final fallback.
       const fallback = getByPath(messages.en as Dict, key);
       if (typeof fallback === "string") return interpolate(fallback, vars);
       return key;
@@ -66,8 +105,8 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ locale, setLocale, t }),
-    [locale, setLocale, t],
+    () => ({ locale, setLocale, t, dateLocale: meta.dateLocale }),
+    [locale, setLocale, t, meta.dateLocale],
   );
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;

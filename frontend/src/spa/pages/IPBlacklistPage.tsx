@@ -1,9 +1,11 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import { RiGroupLine, RiShieldCrossLine } from "@remixicon/react";
 import { api } from "@/api";
 import { isAdminRole, useAuthStore } from "@/auth/auth-store";
 import { useI18n } from "@/i18n";
+import { SettingsTabs } from "@/components/layout/settings-tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RefreshButton } from "@/components/ui/refresh-button";
@@ -36,7 +38,7 @@ type FormState = {
 };
 
 export default function IPBlacklistPage() {
-  const { t, locale } = useI18n();
+  const { t, dateLocale } = useI18n();
   const isAdmin = isAdminRole(useAuthStore((s) => s.user)?.role);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -77,7 +79,7 @@ export default function IPBlacklistPage() {
     if (!value) return "-";
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return "-";
-    return date.toLocaleString(locale === "zh" ? "zh-CN" : "en-US");
+    return date.toLocaleString(dateLocale);
   };
 
   const openEdit = (record: Entry) => {
@@ -131,6 +133,12 @@ export default function IPBlacklistPage() {
 
   return (
     <div className="space-y-4 p-4 md:p-6">
+      <SettingsTabs
+        tabs={[
+          { href: "/ip-blacklist", label: t("nav.ipBlacklist"), icon: RiShieldCrossLine },
+          { href: "/users", label: t("nav.users"), adminOnly: true, icon: RiGroupLine },
+        ]}
+      />
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold">{t("nav.ipBlacklist")}</h1>

@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { RiNodeTree, RiRobot2Line } from "@remixicon/react";
 import { api } from "@/api";
 import { useI18n } from "@/i18n";
+import { SettingsTabs } from "@/components/layout/settings-tabs";
 import { Badge } from "@/components/ui/badge";
 import { RefreshButton } from "@/components/ui/refresh-button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,7 +26,7 @@ type Agent = {
 };
 
 export default function AgentsPage() {
-  const { t } = useI18n();
+  const { t, dateLocale } = useI18n();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -56,7 +58,7 @@ export default function AgentsPage() {
     if (!value) return "-";
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return "-";
-    return date.toLocaleString();
+    return date.toLocaleString(dateLocale);
   };
 
   const formatRuntime = (agent: Agent) =>
@@ -64,6 +66,12 @@ export default function AgentsPage() {
 
   return (
     <div className="space-y-4 p-4 md:p-6">
+      <SettingsTabs
+        tabs={[
+          { href: "/agents", label: t("nav.agents"), icon: RiNodeTree },
+          { href: "/robots", label: t("nav.robots"), icon: RiRobot2Line },
+        ]}
+      />
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold">{t("nav.agents")}</h1>

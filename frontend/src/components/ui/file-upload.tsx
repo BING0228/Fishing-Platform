@@ -8,6 +8,7 @@ import {
 } from "@remixicon/react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/i18n";
 
 type FileUploadProps = {
   id?: string;
@@ -36,6 +37,7 @@ export function FileUpload({
   className,
   disabled,
 }: FileUploadProps) {
+  const { t } = useI18n();
   const inputRef = React.useRef<HTMLInputElement>(null);
 
   return (
@@ -70,7 +72,7 @@ export function FileUpload({
             <button
               type="button"
               className="rounded p-0.5 text-slate-500 hover:bg-slate-200 hover:text-slate-800"
-              aria-label="Remove file"
+              aria-label={t("common.removeFile")}
               disabled={disabled}
               onClick={() => {
                 onChange(null);

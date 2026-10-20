@@ -56,7 +56,7 @@ type InfoGatherFinding = {
 
 export default function WorkbenchInfoGatheringDetailPage() {
   const { id } = useParams();
-  const { t, locale } = useI18n();
+  const { t, dateLocale } = useI18n();
   const navigate = useNavigate();
   const [job, setJob] = useState<InfoGatherJob | null>(null);
   const [findings, setFindings] = useState<InfoGatherFinding[]>([]);
@@ -156,7 +156,7 @@ export default function WorkbenchInfoGatheringDetailPage() {
 
   const formatTime = (value?: string) => {
     if (!value) return "-";
-    return new Date(value).toLocaleString(locale === "zh" ? "zh-CN" : "en-US");
+    return new Date(value).toLocaleString(dateLocale);
   };
 
   const statusBadge = (status: string) => {

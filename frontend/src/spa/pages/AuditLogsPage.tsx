@@ -6,10 +6,12 @@ import {
   RiCloseLine,
 } from "@remixicon/react";
 import { format as formatDateFns } from "date-fns";
-import { enUS, zhCN } from "date-fns/locale";
+import { enUS, ja, ko, zhCN, zhTW } from "date-fns/locale";
+import type { Locale as DateFnsLocale } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import { api } from "@/api";
 import { useI18n } from "@/i18n";
+import type { LocaleCode } from "@/i18n/locales";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RefreshButton } from "@/components/ui/refresh-button";
@@ -63,8 +65,16 @@ type AuditLog = {
   created_at?: string;
 };
 
+const DATE_FNS_LOCALES: Record<LocaleCode, DateFnsLocale> = {
+  en: enUS,
+  "zh-CN": zhCN,
+  "zh-TW": zhTW,
+  ja,
+  ko,
+};
+
 export default function AuditLogsPage() {
-  const { t, locale } = useI18n();
+  const { t, locale, dateLocale } = useI18n();
   const [items, setItems] = useState<AuditLog[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -76,7 +86,7 @@ export default function AuditLogsPage() {
   const [error, setError] = useState("");
   const [detail, setDetail] = useState<AuditLog | null>(null);
 
-  const dateLocale = locale === "zh" ? zhCN : enUS;
+  const calendarLocale = DATE_FNS_LOCALES[locale];
 
   const selectedRange = useMemo<DateRange | undefined>(() => {
     const start = parseYMD(from);
@@ -130,7 +140,7 @@ export default function AuditLogsPage() {
     if (!value) return "-";
     const parsed = new Date(value);
     if (Number.isNaN(parsed.getTime())) return "-";
-    return parsed.toLocaleString(locale === "zh" ? "zh-CN" : "en-US");
+    return parsed.toLocaleString(dateLocale);
   };
 
   const onRangeSelect = (range: DateRange | undefined) => {
@@ -190,7 +200,7 @@ export default function AuditLogsPage() {
                   selected={selectedRange}
                   onSelect={onRangeSelect}
                   numberOfMonths={1}
-                  locale={dateLocale}
+                  locale={calendarLocale}
                   defaultMonth={
                     selectedRange?.from || selectedRange?.to || new Date()
                   }

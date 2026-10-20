@@ -134,7 +134,7 @@ const emptyForm = (): FormState => ({
   frontend_route: "",
   login_url: "",
   use_https: false,
-  port: 6000,
+  port: 8080,
   robots: [],
   agent_ids: [PLATFORM],
   qr_relay_id: "",
@@ -254,7 +254,7 @@ export default function ProjectListPage() {
       frontend_route: record.frontend_route || "",
       login_url: record.login_url || "",
       use_https: !!record.use_https,
-      port: record.port || 6000,
+      port: record.port || 8080,
       robots: record.robot_ids || [],
       agent_ids: record.agent_ids?.length ? record.agent_ids : [PLATFORM],
       qr_relay_id: record.qr_relay_id ? String(record.qr_relay_id) : "",
@@ -774,12 +774,12 @@ export default function ProjectListPage() {
                 <Input
                   id="port"
                   type="number"
-                  min={6000}
-                  max={6100}
+                  min={8080}
+                  max={8180}
                   className="w-28"
                   value={form.port}
                   onChange={(e) =>
-                    setForm({ ...form, port: Number(e.target.value) || 6000 })
+                    setForm({ ...form, port: Number(e.target.value) || 8080 })
                   }
                   placeholder={
                     form.run_mode === "local"

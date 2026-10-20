@@ -1,10 +1,11 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
-import { RiAddLine } from "@remixicon/react";
+import { RiAddLine, RiGroupLine, RiShieldCrossLine } from "@remixicon/react";
 import { api } from "@/api";
 import { useAuthStore } from "@/auth/auth-store";
 import { useI18n } from "@/i18n";
+import { SettingsTabs } from "@/components/layout/settings-tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RefreshButton } from "@/components/ui/refresh-button";
@@ -43,7 +44,7 @@ type CreateForm = {
 const emptyForm = (): CreateForm => ({ username: "", password: "" });
 
 export default function UsersPage() {
-  const { t, locale } = useI18n();
+  const { t, dateLocale } = useI18n();
   const currentUser = useAuthStore((s) => s.user);
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -85,7 +86,7 @@ export default function UsersPage() {
     if (!value) return "-";
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return "-";
-    return date.toLocaleString(locale === "zh" ? "zh-CN" : "en-US");
+    return date.toLocaleString(dateLocale);
   };
 
   const roleLabel = (role: string) =>
@@ -166,6 +167,12 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-4 p-4 md:p-6">
+      <SettingsTabs
+        tabs={[
+          { href: "/ip-blacklist", label: t("nav.ipBlacklist"), icon: RiShieldCrossLine },
+          { href: "/users", label: t("nav.users"), adminOnly: true, icon: RiGroupLine },
+        ]}
+      />
       <div className="flex items-center justify-between gap-2">
         <div>
           <h1 className="text-xl font-semibold">{t("nav.users")}</h1>

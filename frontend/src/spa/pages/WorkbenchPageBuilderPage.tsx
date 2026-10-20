@@ -310,7 +310,7 @@ function PageThumb({
 }
 
 export default function WorkbenchPageBuilderPage() {
-  const { t, locale } = useI18n();
+  const { t, dateLocale } = useI18n();
   const [pages, setPages] = useState<PageSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -469,7 +469,7 @@ export default function WorkbenchPageBuilderPage() {
     if (!value) return "-";
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return "-";
-    return date.toLocaleString(locale === "zh" ? "zh-CN" : "en-US");
+    return date.toLocaleString(dateLocale);
   };
 
   const onDeletePage = async () => {

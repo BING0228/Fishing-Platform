@@ -49,7 +49,7 @@ type MailEvent = {
 
 export default function WorkbenchMailDetailPage() {
   const { id } = useParams();
-  const { t, locale } = useI18n();
+  const { t, dateLocale } = useI18n();
   const [campaign, setCampaign] = useState<MailCampaign | null>(null);
   const [recipients, setRecipients] = useState<MailRecipient[]>([]);
   const [events, setEvents] = useState<MailEvent[]>([]);
@@ -84,7 +84,7 @@ export default function WorkbenchMailDetailPage() {
 
   const formatTime = (value?: string) => {
     if (!value) return "-";
-    return new Date(value).toLocaleString(locale === "zh" ? "zh-CN" : "en-US");
+    return new Date(value).toLocaleString(dateLocale);
   };
 
   const statusBadge = (status: string) => {

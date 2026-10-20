@@ -4,9 +4,11 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import {
   RiAddLine,
   RiBrainAi3Line,
+  RiGlobalLine,
 } from "@remixicon/react";
 import { api } from "@/api";
 import { useI18n } from "@/i18n";
+import { SettingsTabs } from "@/components/layout/settings-tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RefreshButton } from "@/components/ui/refresh-button";
@@ -35,17 +37,24 @@ type AiProfile = {
   id: string;
   name: string;
   enabled: boolean;
+  api_format: string;
   base_url: string;
   api_key: string;
   api_key_set: boolean;
   model: string;
   timeout_sec: number;
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+  request_count: number;
+  last_used_at: string | null;
 };
 
 type ProfileForm = {
   id: string;
   name: string;
   enabled: boolean;
+  api_format: string;
   base_url: string;
   api_key: string;
   model: string;
@@ -57,6 +66,7 @@ const emptyForm = (): ProfileForm => ({
   id: "",
   name: "",
   enabled: false,
+  api_format: "openai",
   base_url: "https://api.x.ai/v1",
   api_key: "",
   model: "grok-4.5",
@@ -65,7 +75,7 @@ const emptyForm = (): ProfileForm => ({
 });
 
 export default function AiSettingsPage() {
-  const { t } = useI18n();
+  const { t, dateLocale } = useI18n();
   const [profiles, setProfiles] = useState<AiProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -76,6 +86,8 @@ export default function AiSettingsPage() {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<ProfileForm>(emptyForm);
   const [formError, setFormError] = useState("");
+  const [formTestReport, setFormTestReport] = useState("");
+  const [formTestOk, setFormTestOk] = useState<boolean | null>(null);
   const [apiKeyDirty, setApiKeyDirty] = useState(false);
 
   const [deleteTarget, setDeleteTarget] = useState<AiProfile | null>(null);
@@ -102,6 +114,11 @@ export default function AiSettingsPage() {
     load();
   }, [load]);
 
+  useEffect(() => {
+    setFormTestReport("");
+    setFormTestOk(null);
+  }, [form]);
+
   const persist = async (next: AiProfile[], successMsg: string) => {
     setSaving(true);
     setError("");
@@ -112,6 +129,7 @@ export default function AiSettingsPage() {
           id: p.id,
           name: p.name,
           enabled: p.enabled,
+          api_format: p.api_format,
           base_url: p.base_url,
           model: p.model,
           timeout_sec: p.timeout_sec,
@@ -144,6 +162,7 @@ export default function AiSettingsPage() {
       id: profile.id,
       name: profile.name,
       enabled: profile.enabled,
+      api_format: profile.api_format || "openai",
       base_url: profile.base_url,
       api_key: "",
       model: profile.model,
@@ -166,15 +185,22 @@ export default function AiSettingsPage() {
     }
 
     let next = [...profiles];
+    const existingProfile = profiles.find((p) => p.id === form.id);
     const profilePayload: AiProfile = {
       id: form.id,
       name,
       enabled: form.enabled,
+      api_format: form.api_format,
       base_url: baseUrl,
       api_key: apiKeyDirty ? form.api_key.trim() : "",
       api_key_set: form.api_key_set,
       model,
       timeout_sec: form.timeout_sec || 120,
+      prompt_tokens: existingProfile?.prompt_tokens ?? 0,
+      completion_tokens: existingProfile?.completion_tokens ?? 0,
+      total_tokens: existingProfile?.total_tokens ?? 0,
+      request_count: existingProfile?.request_count ?? 0,
+      last_used_at: existingProfile?.last_used_at ?? null,
     };
 
     if (profilePayload.enabled) {
@@ -257,7 +283,9 @@ export default function AiSettingsPage() {
 
     if (web) {
       const modeLabel =
-        web.mode === "glm_chat_web_search"
+        web.mode === "anthropic_web_search"
+          ? "Anthropic web_search"
+          : web.mode === "glm_chat_web_search"
           ? "Zhipu chat+web_search"
           : web.mode === "glm_web_search"
             ? "Zhipu /web_search"
@@ -281,6 +309,7 @@ export default function AiSettingsPage() {
 
   const runConfigTest = async (payload: {
     id?: string;
+    api_format?: string;
     base_url?: string;
     api_key?: string;
     model?: string;
@@ -292,28 +321,17 @@ export default function AiSettingsPage() {
     error?: string;
     report?: string;
   }> => {
-    setError("");
-    setToast("");
-    setTestReport("");
     try {
       const { data } = await api.testAiSettings(payload);
       const report = formatProbeReport(data || {});
-      setTestReport(report);
-
       const chatOk = data?.chat ? !!data.chat.ok : !!data?.ok;
       const webOk = data?.web_search ? !!data.web_search.ok : false;
-
-      if (chatOk && webOk) {
-        setToast(report);
-        return { ok: true, chatOk, webOk, report };
-      }
-      // Always show the structured report when anything failed.
-      setError(report || data?.error || t("aiSettings.testFailed"));
+      const ok = chatOk && webOk;
       return {
-        ok: chatOk,
+        ok,
         chatOk,
         webOk,
-        error: report,
+        error: ok ? undefined : report || data?.error || t("aiSettings.testFailed"),
         report,
       };
     } catch (err) {
@@ -332,12 +350,12 @@ export default function AiSettingsPage() {
       const data = ax.response?.data;
       if (data?.chat || data?.web_search) {
         const report = formatProbeReport(data);
-        setTestReport(report);
-        setError(report);
+        const chatOk = !!data.chat?.ok;
+        const webOk = !!data.web_search?.ok;
         return {
-          ok: false,
-          chatOk: !!data.chat?.ok,
-          webOk: !!data.web_search?.ok,
+          ok: chatOk && webOk,
+          chatOk,
+          webOk,
           error: report,
           report,
         };
@@ -345,7 +363,6 @@ export default function AiSettingsPage() {
       const msg = data?.error || t("aiSettings.testFailed");
       const endpoint = data?.endpoint;
       const full = endpoint ? `${msg} (${endpoint})` : msg;
-      setError(full);
       return { ok: false, chatOk: false, webOk: false, error: full };
     }
   };
@@ -356,13 +373,22 @@ export default function AiSettingsPage() {
       return;
     }
     setTestingId(profile.id);
+    setError("");
+    setToast("");
+    setTestReport("");
     try {
-      await runConfigTest({
+      const result = await runConfigTest({
         id: profile.id,
+        api_format: profile.api_format,
         base_url: profile.base_url,
         model: profile.model,
         timeout_sec: Math.min(profile.timeout_sec || 60, 90),
       });
+      if (result.ok) {
+        setToast(result.report || t("aiSettings.testConfig"));
+      } else {
+        setError(result.report || result.error || t("aiSettings.testFailed"));
+      }
     } finally {
       setTestingId(null);
     }
@@ -381,25 +407,40 @@ export default function AiSettingsPage() {
       return;
     }
     setFormError("");
+    setFormTestReport("");
+    setFormTestOk(null);
     setTestingForm(true);
     try {
       const result = await runConfigTest({
         id: form.id || undefined,
+        api_format: form.api_format,
         base_url: baseUrl,
         model,
         api_key: key || undefined,
         timeout_sec: Math.min(form.timeout_sec || 60, 90),
       });
-      if (!result.chatOk || !result.webOk) {
-        setFormError(result.report || result.error || t("aiSettings.testFailed"));
-      }
+      setFormTestReport(result.report || result.error || t("aiSettings.testFailed"));
+      setFormTestOk(result.ok);
     } finally {
       setTestingForm(false);
     }
   };
 
+  const numberLocale = dateLocale;
+  const formatNumber = (n: number) => (n || 0).toLocaleString(numberLocale);
+  const formatLastUsed = (value: string | null) =>
+    value
+      ? new Date(value).toLocaleString(numberLocale)
+      : t("aiSettings.neverUsed");
+
   return (
     <div className="space-y-4 p-4 md:p-6">
+      <SettingsTabs
+        tabs={[
+          { href: "/ai-settings", label: t("nav.aiSettings"), icon: RiBrainAi3Line },
+          { href: "/search-settings", label: t("nav.searchSettings"), icon: RiGlobalLine },
+        ]}
+      />
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="flex items-center gap-2 text-xl font-semibold">
@@ -435,12 +476,13 @@ export default function AiSettingsPage() {
 
       <Card>
         <CardContent className="overflow-x-auto p-0">
-          <table className="w-full min-w-[880px] text-left text-sm">
+          <table className="w-full min-w-[1060px] text-left text-sm">
             <thead className="border-b bg-slate-50 text-slate-600">
               <tr>
                 <th className="px-4 py-3 font-medium">{t("aiSettings.name")}</th>
                 <th className="px-4 py-3 font-medium">{t("aiSettings.model")}</th>
                 <th className="px-4 py-3 font-medium">{t("aiSettings.baseUrl")}</th>
+                <th className="px-4 py-3 font-medium">{t("aiSettings.tokens")}</th>
                 <th className="px-4 py-3 font-medium">{t("aiSettings.status")}</th>
                 <th className="px-4 py-3 font-medium">{t("common.actions")}</th>
               </tr>
@@ -449,7 +491,7 @@ export default function AiSettingsPage() {
               {loading && profiles.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     className="px-4 py-8 text-center text-slate-500"
                   >
                     Loading…
@@ -458,7 +500,7 @@ export default function AiSettingsPage() {
               ) : profiles.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     className="px-4 py-8 text-center text-slate-500"
                   >
                     {t("aiSettings.empty")}
@@ -469,10 +511,35 @@ export default function AiSettingsPage() {
                   <tr key={profile.id} className="border-b last:border-0">
                     <td className="px-4 py-3 font-medium">{profile.name}</td>
                     <td className="px-4 py-3 font-mono text-xs">
-                      {profile.model}
+                      <div>{profile.model}</div>
+                      <Badge variant="outline" className="mt-1">
+                        {profile.api_format === "anthropic"
+                          ? t("aiSettings.apiFormatAnthropic")
+                          : t("aiSettings.apiFormatOpenAI")}
+                      </Badge>
                     </td>
                     <td className="max-w-[240px] truncate px-4 py-3 font-mono text-xs">
                       {profile.base_url}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="font-medium">{formatNumber(profile.total_tokens)}</div>
+                      <div className="text-xs text-slate-500">
+                        {t("aiSettings.tokenInOut", {
+                          in: formatNumber(profile.prompt_tokens),
+                          out: formatNumber(profile.completion_tokens),
+                        })}
+                      </div>
+                      <div className="text-xs text-slate-400">
+                        {t("aiSettings.requests", {
+                          count: formatNumber(profile.request_count),
+                        })}
+                        {" · "}
+                        {profile.last_used_at
+                          ? t("aiSettings.lastUsed", {
+                              time: formatLastUsed(profile.last_used_at),
+                            })
+                          : t("aiSettings.neverUsed")}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <Badge
@@ -558,6 +625,42 @@ export default function AiSettingsPage() {
               />
             </div>
             <div className="space-y-1.5">
+              <Label htmlFor="ai-api-format">{t("aiSettings.apiFormat")}</Label>
+              <select
+                id="ai-api-format"
+                className="h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                value={form.api_format}
+                onChange={(e) => {
+                  const nextFormat = e.target.value;
+                  setForm((prev) => {
+                    const next = { ...prev, api_format: nextFormat };
+                    if (nextFormat === "anthropic") {
+                      if (!prev.base_url || prev.base_url === "https://api.x.ai/v1") {
+                        next.base_url = "https://api.anthropic.com/v1";
+                      }
+                      if (!prev.model || prev.model === "grok-4.5") {
+                        next.model = "claude-sonnet-4-5";
+                      }
+                    } else {
+                      if (!prev.base_url || prev.base_url === "https://api.anthropic.com/v1") {
+                        next.base_url = "https://api.x.ai/v1";
+                      }
+                      if (!prev.model || prev.model === "claude-sonnet-4-5") {
+                        next.model = "grok-4.5";
+                      }
+                    }
+                    return next;
+                  });
+                }}
+              >
+                <option value="openai">{t("aiSettings.apiFormatOpenAI")}</option>
+                <option value="anthropic">{t("aiSettings.apiFormatAnthropic")}</option>
+              </select>
+              <p className="text-xs text-muted-foreground">
+                {t("aiSettings.apiFormatHint")}
+              </p>
+            </div>
+            <div className="space-y-1.5">
               <Label htmlFor="ai-base-url">{t("aiSettings.baseUrl")}</Label>
               <Input
                 id="ai-base-url"
@@ -565,10 +668,16 @@ export default function AiSettingsPage() {
                 onChange={(e) =>
                   setForm((prev) => ({ ...prev, base_url: e.target.value }))
                 }
-                placeholder="https://open.bigmodel.cn/api/paas/v4"
+                placeholder={
+                  form.api_format === "anthropic"
+                    ? "https://api.anthropic.com/v1"
+                    : "https://open.bigmodel.cn/api/paas/v4"
+                }
               />
               <p className="text-xs text-muted-foreground">
-                {t("aiSettings.baseUrlHint")}
+                {form.api_format === "anthropic"
+                  ? t("aiSettings.baseUrlHintAnthropic")
+                  : t("aiSettings.baseUrlHint")}
               </p>
             </div>
             <div className="space-y-1.5">
@@ -579,7 +688,11 @@ export default function AiSettingsPage() {
                 onChange={(e) =>
                   setForm((prev) => ({ ...prev, model: e.target.value }))
                 }
-                placeholder="grok-4.5"
+                placeholder={
+                  form.api_format === "anthropic"
+                    ? "claude-sonnet-4-5"
+                    : "grok-4.5"
+                }
               />
             </div>
             <div className="space-y-1.5">
@@ -632,6 +745,17 @@ export default function AiSettingsPage() {
                 }
               />
             </div>
+            {formTestReport ? (
+              <div
+                className={
+                  formTestOk === true
+                    ? "whitespace-pre-line rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700"
+                    : "whitespace-pre-line rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+                }
+              >
+                {formTestReport}
+              </div>
+            ) : null}
             {formError ? (
               <p className="text-sm text-red-600">{formError}</p>
             ) : null}

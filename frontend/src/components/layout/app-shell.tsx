@@ -4,24 +4,21 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   RiArrowRightSLine,
   RiBrainAi3Line,
+  RiChat1Line,
   RiDashboardLine,
   RiFileList3Line,
-  RiGroupLine,
   RiKanbanView2,
   RiLayout4Line,
-  RiLink,
   RiLogoutBoxRLine,
   RiMailLine,
   RiNodeTree,
   RiQrCodeLine,
-  RiRobot2Line,
   RiSearchLine,
   RiSendPlane2Line,
   RiSettings3Line,
   RiShieldCrossLine,
   RiSideBarLine,
   RiToolsLine,
-  RiTranslate2,
 } from "@remixicon/react";
 import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "@/i18n";
@@ -29,6 +26,7 @@ import { isAdminRole, useAuthStore } from "@/auth/auth-store";
 import { api } from "@/api";
 import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/brand-logo";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -60,10 +58,13 @@ type NavItem = {
   key: string;
   icon: React.ComponentType<{ className?: string }>;
   adminOnly?: boolean;
+  /** Sibling routes that keep this group highlighted. */
+  aliases?: string[];
 };
 
 const primaryNav: NavItem[] = [
   { href: "/", key: "nav.dashboard", icon: RiDashboardLine },
+  { href: "/chat", key: "nav.chat", icon: RiChat1Line },
   { href: "/projects", key: "nav.projects", icon: RiKanbanView2 },
   { href: "/audit-logs", key: "nav.auditLogs", icon: RiFileList3Line, adminOnly: true },
 ];
@@ -76,18 +77,41 @@ const workbenchNav: NavItem[] = [
 ];
 
 const systemNav: NavItem[] = [
-  { href: "/robots", key: "nav.robots", icon: RiRobot2Line },
-  { href: "/agents", key: "nav.agents", icon: RiNodeTree },
-  { href: "/ip-blacklist", key: "nav.ipBlacklist", icon: RiShieldCrossLine },
-  { href: "/smtp-services", key: "nav.smtpServices", icon: RiMailLine },
-  { href: "/users", key: "nav.users", icon: RiGroupLine, adminOnly: true },
-  { href: "/ai-settings", key: "nav.aiSettings", icon: RiBrainAi3Line, adminOnly: true },
-  { href: "/mail-tracking", key: "nav.mailTracking", icon: RiLink, adminOnly: true },
+  {
+    href: "/ip-blacklist",
+    key: "nav.accessControl",
+    icon: RiShieldCrossLine,
+    aliases: ["/users"],
+  },
+  {
+    href: "/agents",
+    key: "nav.integrations",
+    icon: RiNodeTree,
+    aliases: ["/robots"],
+  },
+  {
+    href: "/smtp-services",
+    key: "nav.email",
+    icon: RiMailLine,
+    aliases: ["/mail-tracking"],
+  },
+  {
+    href: "/ai-settings",
+    key: "nav.ai",
+    icon: RiBrainAi3Line,
+    adminOnly: true,
+    aliases: ["/search-settings"],
+  },
 ];
 
 function isActivePath(pathname: string, href: string) {
   if (href === "/") return pathname === "/";
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function matchesNav(pathname: string, item: NavItem) {
+  if (isActivePath(pathname, item.href)) return true;
+  return (item.aliases ?? []).some((alias) => isActivePath(pathname, alias));
 }
 
 function NavLink({
@@ -101,7 +125,7 @@ function NavLink({
 }) {
   const { t } = useI18n();
   const location = useLocation();
-  const active = isActivePath(location.pathname, item.href);
+  const active = matchesNav(location.pathname, item);
   const Icon = item.icon;
   const label = t(item.key);
 
@@ -132,7 +156,7 @@ function NavLink({
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const { t, locale, setLocale } = useI18n();
+  const { t } = useI18n();
   const location = useLocation();
   const navigate = useNavigate();
   const logout = useAuthStore((s) => s.logout);
@@ -155,7 +179,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     [location.pathname],
   );
   const systemActive = useMemo(
-    () => visibleSystemNav.some((item) => isActivePath(location.pathname, item.href)),
+    () => visibleSystemNav.some((item) => matchesNav(location.pathname, item)),
     [location.pathname, visibleSystemNav],
   );
   const [workbenchOpen, setWorkbenchOpen] = useState(true);
@@ -191,7 +215,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <TooltipProvider delayDuration={0}>
-      <div className="flex min-h-svh w-full bg-background">
+      <div className="flex h-svh max-h-svh w-full overflow-hidden bg-background">
         <aside
           className={cn(
             "sticky top-0 z-20 flex h-svh shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200",
@@ -207,7 +231,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <BrandLogo size={22} fill="#fff" title={t("app.title")} />
             {!collapsed && (
               <div className="min-w-0 leading-tight">
-                <div className="truncate text-sm font-semibold">{t("app.title")}</div>
+                <div className="truncate font-brand text-sm font-semibold tracking-[0.12em]">
+                  {t("app.title")}
+                </div>
                 <div className="truncate text-[11px] text-sidebar-foreground/60">
                   {user?.role === "operator"
                     ? t("users.roleOperator")
@@ -221,7 +247,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div className="space-y-1">
               {!collapsed && (
                 <div className="px-2 pb-1 text-[11px] font-medium uppercase tracking-wide text-sidebar-foreground/50">
-                  Platform
+                  {t("nav.platform")}
                 </div>
               )}
               {visiblePrimaryNav.map((item) => (
@@ -395,34 +421,31 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </aside>
 
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <header className="sticky top-0 z-10 flex h-[var(--header-height)] items-center gap-2 border-b bg-background/95 px-4 backdrop-blur">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setCollapsed((v) => !v)}
-              aria-label="Toggle sidebar"
+              aria-label={t("common.toggleSidebar")}
             >
               <RiSideBarLine className="h-4 w-4" />
             </Button>
             <Separator orientation="vertical" className="mr-1 h-4" />
             <div className="text-sm font-medium">{pageTitle}</div>
             <div className="ml-auto flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setLocale(locale === "zh" ? "en" : "zh")}
-                aria-label={t(
-                  locale === "zh"
-                    ? "locale.switchToEnglish"
-                    : "locale.switchToChinese",
-                )}
-              >
-                <RiTranslate2 className="h-4 w-4" />
-              </Button>
+              <LanguageSwitcher />
             </div>
           </header>
-          <main className="flex min-h-0 flex-1 flex-col overflow-auto">
+          <main
+            className={cn(
+              "flex min-h-0 flex-1 flex-col",
+              // Chat manages its own panes; prevent the shell from scrolling the session rail + thread together.
+              location.pathname.startsWith("/chat")
+                ? "overflow-hidden"
+                : "overflow-auto",
+            )}
+          >
             {children}
           </main>
         </div>
