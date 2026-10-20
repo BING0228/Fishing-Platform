@@ -1,3 +1,4 @@
+import { DEMO_MODE } from "@/demo/config";
 /**
  * Pure helpers for the project-detail workspace.
  * Framework-agnostic so node:test / tsx can import them directly.
@@ -97,13 +98,16 @@ export function buildAccessUrl(
     return agentURL;
   }
 
-  const protocol = project.use_https ? "https:" : "http:";
-  const port = project.port || 6000;
   const raw = project.frontend_route;
   let routePath = "";
   if (raw && raw !== "/") {
     routePath = raw.startsWith("/") ? raw : `/${raw}`;
   }
+  if (DEMO_MODE) {
+    return `https://console.example.com${routePath}`;
+  }
+  const protocol = project.use_https ? "https:" : "http:";
+  const port = project.port || 8080;
   return `${protocol}//${hostname}:${port}${routePath}`;
 }
 
