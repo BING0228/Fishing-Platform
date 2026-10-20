@@ -49,7 +49,7 @@ Spearhook 僅限用於獲得明確授權的安全測試、紅隊演練與釣魚�
 
 若熟悉 [Gophish](https://github.com/gophish/gophish)：其側重於活動與模板管理；Spearhook 則面向演練全流程，提供帶 AI 鏡像的頁面庫、AI 助手維運、多 Agent 部署、即時 QR 中繼、AI 公開資訊收集、Webhook、IP 黑名單、稽核與角色管理。
 
-單一 Go 二進位內嵌前端（`frontend/dist`），在同一埠提供 API 與控制台。技術棧：Go 1.24 / Gin / GORM+SQLite / Next.js 靜態匯出 / 可選 Docker SDK。可造訪[線上示範](https://p1temax.github.io/Spearhook/)查看唯讀的靜態介面。
+單一 Go 二進位內嵌前端（`frontend/dist`），在同一埠提供 API 與控制台。技術棧：Go 1.24 / Gin / GORM+SQLite / Next.js 靜態匯出 / 可選 Docker SDK。
 
 ---
 
