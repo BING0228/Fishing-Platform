@@ -68,3 +68,21 @@ npm run build:demo:root
 ```
 
 The output is `frontend/demo-dist` and is ignored by Git.
+
+## Optional: Workers Builds (the "Worker project" form)
+
+If the Cloudflare dashboard only offers the Worker builds form, it is a Workers
+Static Assets project, not a Pages project. The repository includes
+`wrangler.jsonc` for that flow:
+
+| Field | Value |
+|-------|-------|
+| Project name | `spearhook-demo` |
+| Root directory | leave empty (repository root) |
+| Build command | `cd frontend && npm ci && npm run build:demo:root` |
+| Deploy command | `npx wrangler deploy` |
+| Preview command | leave the default, or disable preview builds |
+| Environment | `NODE_VERSION=22`; no secrets |
+
+`wrangler.jsonc` serves `frontend/demo-dist` with SPA fallback and does not need
+a Worker script. The project name must match `name` in `wrangler.jsonc`.
