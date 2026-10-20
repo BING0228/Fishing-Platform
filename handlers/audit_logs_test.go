@@ -8,12 +8,12 @@ import (
 	"testing"
 	"time"
 
-	"fishing-platform-backend/audit"
-	"fishing-platform-backend/config"
-	"fishing-platform-backend/models"
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
+	"spearhook/audit"
+	"spearhook/config"
+	"spearhook/models"
 )
 
 func setupAuditTestDB(t *testing.T) *gorm.DB {

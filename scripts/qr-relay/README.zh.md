@@ -1,6 +1,6 @@
 # QR 截屏中继
 
-在本机持续截取屏幕上的二维码，把画面上传到钓鱼台，由固定公开链接托管最新一帧。仅用于授权演练。
+在本机持续截取屏幕上的二维码，把画面上传到 Spearhook，由固定公开链接托管最新一帧。仅用于授权演练。
 
 推荐从控制台 **工作台 → QR 钓鱼** 下载 `fishing-qr-relay.zip`（内含可改的 `config.yaml`）。
 
@@ -28,7 +28,7 @@ Windows 激活虚拟环境用 `.venv\Scripts\activate`。
 
 ## 脚本会做什么
 
-- 只把**图片**上传到 `POST /api/qr-relay/frames/`
+- 只上传**二维码区域**到 `POST /api/qr-relay/frames/`（默认自动裁剪；`crop_to_qr: false` 可上传整屏）
 - 画面里暂时没有二维码时，发送 `POST /api/qr-relay/heartbeat/`（控制台健康状态保持「在线」）
 - 每次截屏都会尝试解码，解码文本放在 multipart 字段 `payload`
 

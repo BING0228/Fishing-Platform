@@ -1,4 +1,4 @@
-# 钓鱼台 — 本机 QR 截屏中继 / Fishing Platform — local QR screen relay
+# Spearhook — local QR screen relay
 # 中文用法见 README.zh.md
 platform_url: "http://127.0.0.1:8000"
 upload_token: "paste-upload-token-from-console"
@@ -19,6 +19,9 @@ heartbeat_interval_ms: 3000
 
 # 解码内容 / 图片哈希未变时跳过上传
 dedupe: true
+
+# 上传时裁剪到二维码区域（默认 true）；false 则上传整屏
+crop_to_qr: true
 
 # platform_url 为 https 时校验 TLS
 verify_tls: true

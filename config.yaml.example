@@ -40,3 +40,28 @@ container:
 #   secret: ""
 #   allow_redirect_hosts: []
 #   # click/open 路径由每个邮件活动自动生成，不再在此配置
+
+# 对话编排（可选；留空使用默认值）
+# chat:
+#   # 单轮用户消息最多允许多少次 LLM ↔ 工具循环
+#   max_tool_rounds: 8
+#   # 同一用户两次发消息的最小间隔（毫秒）
+#   rate_min_interval_ms: 800
+#   # 每用户每日对话请求上限
+#   daily_limit: 200
+#   # 会话超过多少条消息后压缩早期上下文（摘要为一条 system 消息）
+#   max_history_messages: 40
+
+# 联网搜索提供方（可选；首次启动会种子到数据库，之后请在「系统 → 搜索配置」修改）
+# provider: auto | deepseek | brave | tavily | serper | bocha
+#   auto     = 使用启用 AI 配置的原生 web_search
+#   deepseek = POST https://api.deepseek.com/v1/tools/search
+#   brave    = https://api.search.brave.com/res/v1/web/search
+#   tavily   = https://api.tavily.com/search
+#   serper   = https://google.serper.dev/search
+#   bocha    = https://api.bochaai.com/v1/web-search
+# search:
+#   provider: auto
+#   base_url: ""
+#   api_key: ""
+#   count: 10

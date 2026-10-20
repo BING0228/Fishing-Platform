@@ -15,9 +15,9 @@ import (
 	"strings"
 	"time"
 
-	"fishing-platform-backend/config"
-	"fishing-platform-backend/models"
 	"github.com/gin-gonic/gin"
+	"spearhook/config"
+	"spearhook/models"
 )
 
 // CreateRobot creates a new robot
@@ -338,7 +338,7 @@ type robotPushResult struct {
 func sendRobotTestMessage(robot models.Robot, customMessage string) robotPushResult {
 	message := strings.TrimSpace(customMessage)
 	if message == "" {
-		message = "Fishing Platform push channel test"
+		message = "Spearhook push channel test"
 	}
 
 	payload, err := buildRobotTestPayload(robot, message)
@@ -373,7 +373,7 @@ func buildRobotTestPayload(robot models.Robot, message string) (map[string]inter
 		return map[string]interface{}{
 			"msgtype": "markdown_v2",
 			"markdown_v2": map[string]interface{}{
-				"content": fmt.Sprintf("## Fishing Platform push channel test\n```message\n%s\n```\n---\n%s", message, now),
+				"content": fmt.Sprintf("## Spearhook push channel test\n```message\n%s\n```\n---\n%s", message, now),
 			},
 		}, nil
 	case models.RobotTypeFeishu:
@@ -387,7 +387,7 @@ func buildRobotTestPayload(robot models.Robot, message string) (map[string]inter
 					"template": "blue",
 					"title": map[string]interface{}{
 						"tag":     "plain_text",
-						"content": "Fishing Platform push channel test",
+						"content": "Spearhook push channel test",
 					},
 				},
 				"elements": []map[string]interface{}{
@@ -415,14 +415,14 @@ func buildRobotTestPayload(robot models.Robot, message string) (map[string]inter
 		}
 		return map[string]interface{}{
 			"chat_id":                  chatID,
-			"text":                     fmt.Sprintf("Fishing Platform push channel test\n\n%s\n\n%s", message, now),
+			"text":                     fmt.Sprintf("Spearhook push channel test\n\n%s\n\n%s", message, now),
 			"disable_web_page_preview": true,
 		}, nil
 	case models.RobotTypeSlack:
 		return map[string]interface{}{
-			"text": fmt.Sprintf("Fishing Platform push channel test\n%s\n%s", message, now),
+			"text": fmt.Sprintf("Spearhook push channel test\n%s\n%s", message, now),
 			"blocks": []map[string]interface{}{
-				{"type": "header", "text": map[string]interface{}{"type": "plain_text", "text": "Fishing Platform push channel test"}},
+				{"type": "header", "text": map[string]interface{}{"type": "plain_text", "text": "Spearhook push channel test"}},
 				{"type": "section", "text": map[string]interface{}{"type": "mrkdwn", "text": fmt.Sprintf("*Message*\n%s", message)}},
 				{"type": "context", "elements": []map[string]interface{}{{"type": "mrkdwn", "text": now}}},
 			},
@@ -431,16 +431,16 @@ func buildRobotTestPayload(robot models.Robot, message string) (map[string]inter
 		return map[string]interface{}{
 			"msgtype": "markdown",
 			"markdown": map[string]interface{}{
-				"title": "Fishing Platform push channel test",
-				"text":  fmt.Sprintf("### Fishing Platform push channel test\n\n%s\n\n---\n\n%s", message, now),
+				"title": "Spearhook push channel test",
+				"text":  fmt.Sprintf("### Spearhook push channel test\n\n%s\n\n---\n\n%s", message, now),
 			},
 		}, nil
 	case models.RobotTypeDiscord:
 		return map[string]interface{}{
-			"content": "Fishing Platform push channel test",
+			"content": "Spearhook push channel test",
 			"embeds": []map[string]interface{}{
 				{
-					"title":       "Fishing Platform push channel test",
+					"title":       "Spearhook push channel test",
 					"description": message,
 					"color":       3447003,
 					"footer":      map[string]interface{}{"text": now},

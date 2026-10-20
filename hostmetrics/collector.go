@@ -5,9 +5,9 @@ import (
 	"log"
 	"time"
 
-	"fishing-platform-backend/config"
-	"fishing-platform-backend/models"
-	"fishing-platform-backend/utils"
+	"spearhook/config"
+	"spearhook/models"
+	"spearhook/utils"
 )
 
 const (

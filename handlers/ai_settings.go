@@ -9,11 +9,12 @@ import (
 	"strings"
 	"time"
 
-	"fishing-platform-backend/config"
-	"fishing-platform-backend/models"
-	"fishing-platform-backend/utils"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"spearhook/config"
+	"spearhook/models"
+	"spearhook/platform"
+	"spearhook/utils"
 )
 
 const (
@@ -23,14 +24,20 @@ const (
 )
 
 type aiProfileDTO struct {
-	ID         string `json:"id"`
-	Name       string `json:"name"`
-	Enabled    bool   `json:"enabled"`
-	BaseURL    string `json:"base_url"`
-	APIKey     string `json:"api_key"`
-	APIKeySet  bool   `json:"api_key_set"`
-	Model      string `json:"model"`
-	TimeoutSec int    `json:"timeout_sec"`
+	ID               string     `json:"id"`
+	Name             string     `json:"name"`
+	Enabled          bool       `json:"enabled"`
+	APIFormat        string     `json:"api_format"`
+	BaseURL          string     `json:"base_url"`
+	APIKey           string     `json:"api_key"`
+	APIKeySet        bool       `json:"api_key_set"`
+	Model            string     `json:"model"`
+	TimeoutSec       int        `json:"timeout_sec"`
+	PromptTokens     int64      `json:"prompt_tokens"`
+	CompletionTokens int64      `json:"completion_tokens"`
+	TotalTokens      int64      `json:"total_tokens"`
+	RequestCount     int64      `json:"request_count"`
+	LastUsedAt       *time.Time `json:"last_used_at"`
 }
 
 type aiSettingsDTO struct {
@@ -79,7 +86,12 @@ func UpdateAISettings(c *gin.Context) {
 	for _, p := range payload.Profiles {
 		name := strings.TrimSpace(p.Name)
 		model := strings.TrimSpace(p.Model)
-		baseURL := utils.NormalizeOpenAICompatibleBaseURL(p.BaseURL)
+		apiFormat := utils.NormalizeAIAPIFormat(p.APIFormat)
+		if apiFormat == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "api_format must be openai or anthropic"})
+			return
+		}
+		baseURL := utils.NormalizeAIBaseURL(apiFormat, p.BaseURL)
 		if name == "" || model == "" || baseURL == "" {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "each profile requires name, model and base_url"})
 			return
@@ -111,15 +123,25 @@ func UpdateAISettings(c *gin.Context) {
 		if p.Enabled {
 			enabledCount++
 		}
-		merged = append(merged, models.AIProfile{
+		row := models.AIProfile{
 			ID:         id,
 			Name:       name,
 			Enabled:    p.Enabled,
+			APIFormat:  apiFormat,
 			BaseURL:    baseURL,
 			APIKey:     encryptedKey,
 			Model:      model,
 			TimeoutSec: timeout,
-		})
+		}
+		if old, ok := existingByID[id]; ok {
+			row.PromptTokens = old.PromptTokens
+			row.CompletionTokens = old.CompletionTokens
+			row.TotalTokens = old.TotalTokens
+			row.RequestCount = old.RequestCount
+			row.LastUsedAt = old.LastUsedAt
+			row.CreatedAt = old.CreatedAt
+		}
+		merged = append(merged, row)
 	}
 	if enabledCount > 1 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "only one AI profile can be enabled"})
@@ -146,6 +168,7 @@ func UpdateAISettings(c *gin.Context) {
 
 type aiTestRequest struct {
 	ID         string `json:"id"`
+	APIFormat  string `json:"api_format"`
 	BaseURL    string `json:"base_url"`
 	APIKey     string `json:"api_key"`
 	Model      string `json:"model"`
@@ -161,10 +184,16 @@ func TestAISettings(c *gin.Context) {
 		return
 	}
 
-	baseURL := utils.NormalizeOpenAICompatibleBaseURL(req.BaseURL)
+	apiFormat := utils.NormalizeAIAPIFormat(req.APIFormat)
+	if strings.TrimSpace(req.APIFormat) != "" && apiFormat == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "api_format must be openai or anthropic"})
+		return
+	}
+	baseURL := utils.NormalizeAIBaseURL(apiFormat, req.BaseURL)
 	model := strings.TrimSpace(req.Model)
 	apiKey := strings.TrimSpace(req.APIKey)
 	timeoutSec := req.TimeoutSec
+	profileID := strings.TrimSpace(req.ID)
 
 	if id := strings.TrimSpace(req.ID); id != "" {
 		db := config.GetDB()
@@ -173,8 +202,11 @@ func TestAISettings(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "AI profile not found"})
 			return
 		}
+		if strings.TrimSpace(req.APIFormat) == "" {
+			apiFormat = utils.AIAPIFormatOrDefault(row.APIFormat)
+		}
 		if baseURL == "" {
-			baseURL = utils.NormalizeOpenAICompatibleBaseURL(row.BaseURL)
+			baseURL = utils.NormalizeAIBaseURL(apiFormat, row.BaseURL)
 		}
 		if model == "" {
 			model = strings.TrimSpace(row.Model)
@@ -193,6 +225,9 @@ func TestAISettings(c *gin.Context) {
 		}
 	}
 
+	if apiFormat == "" {
+		apiFormat = utils.AIAPIFormatOpenAI
+	}
 	if baseURL == "" || model == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "base_url and model are required"})
 		return
@@ -218,11 +253,13 @@ func TestAISettings(c *gin.Context) {
 	}
 
 	chatCtx, chatCancel := context.WithTimeout(c.Request.Context(), chatTimeout)
-	chatResult, chatErr := utils.ProbeChatCompletions(chatCtx, baseURL, apiKey, model, chatTimeout)
+	chatCtx = utils.WithAIProfileID(chatCtx, profileID)
+	chatResult, chatErr := utils.ProbeChatCompletionsFormat(chatCtx, apiFormat, baseURL, apiKey, model, chatTimeout)
 	chatCancel()
 
 	webCtx, webCancel := context.WithTimeout(c.Request.Context(), webTimeout)
-	webResult, webErr := utils.ProbeWebSearch(webCtx, baseURL, apiKey, model, webTimeout)
+	webCtx = utils.WithAIProfileID(webCtx, profileID)
+	webResult, webErr := utils.ProbeWebSearchFormat(webCtx, apiFormat, baseURL, apiKey, model, webTimeout)
 	webCancel()
 
 	chatPayload := gin.H{
@@ -263,20 +300,7 @@ func TestAISettings(c *gin.Context) {
 
 // ActiveAIConfig returns the enabled profile with decrypted API key for server use.
 func ActiveAIConfig() (models.AIProfile, string, bool) {
-	db := config.GetDB()
-	var profile models.AIProfile
-	if err := db.Where("enabled = ?", true).Order("updated_at DESC").First(&profile).Error; err != nil {
-		return models.AIProfile{}, "", false
-	}
-	plain := ""
-	if strings.TrimSpace(profile.APIKey) != "" {
-		if dec, err := utils.Decrypt(profile.APIKey); err == nil {
-			plain = dec
-		} else {
-			plain = profile.APIKey
-		}
-	}
-	return profile, plain, true
+	return platform.ActiveAIConfig()
 }
 
 func toAIProfileDTOs(rows []models.AIProfile) []aiProfileDTO {
@@ -291,14 +315,20 @@ func toAIProfileDTOs(rows []models.AIProfile) []aiProfileDTO {
 			}
 		}
 		out = append(out, aiProfileDTO{
-			ID:         row.ID,
-			Name:       row.Name,
-			Enabled:    row.Enabled,
-			BaseURL:    row.BaseURL,
-			APIKey:     maskSecret(plain),
-			APIKeySet:  plain != "",
-			Model:      row.Model,
-			TimeoutSec: row.TimeoutSec,
+			ID:               row.ID,
+			Name:             row.Name,
+			Enabled:          row.Enabled,
+			APIFormat:        utils.AIAPIFormatOrDefault(row.APIFormat),
+			BaseURL:          row.BaseURL,
+			APIKey:           maskSecret(plain),
+			APIKeySet:        plain != "",
+			Model:            row.Model,
+			TimeoutSec:       row.TimeoutSec,
+			PromptTokens:     row.PromptTokens,
+			CompletionTokens: row.CompletionTokens,
+			TotalTokens:      row.TotalTokens,
+			RequestCount:     row.RequestCount,
+			LastUsedAt:       row.LastUsedAt,
 		})
 	}
 	return out

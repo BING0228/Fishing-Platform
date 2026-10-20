@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"fishing-platform-backend/models"
+	"spearhook/models"
 	"gorm.io/gorm"
 )
 

@@ -10,11 +10,11 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"fishing-platform-backend/config"
-	"fishing-platform-backend/models"
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
+	"spearhook/config"
+	"spearhook/models"
 )
 
 func TestDownloadQrRelayScriptZip(t *testing.T) {

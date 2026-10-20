@@ -5,21 +5,21 @@ import (
 	"net/http"
 	"strings"
 
-	"fishing-platform-backend/config"
-	"fishing-platform-backend/models"
-	"fishing-platform-backend/utils"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"spearhook/config"
+	"spearhook/models"
+	"spearhook/utils"
 )
 
 type phishingPageSummary struct {
-	ID          uint      `json:"id"`
-	Name        string    `json:"name"`
-	URL         string    `json:"url"`
-	Description string    `json:"description"`
-	CreatedBy   uint      `json:"created_by"`
-	CreatedAt   any       `json:"created_at"`
-	UpdatedAt   any       `json:"updated_at"`
+	ID          uint   `json:"id"`
+	Name        string `json:"name"`
+	URL         string `json:"url"`
+	Description string `json:"description"`
+	CreatedBy   uint   `json:"created_by"`
+	CreatedAt   any    `json:"created_at"`
+	UpdatedAt   any    `json:"updated_at"`
 }
 
 func toPhishingPageSummary(page models.PhishingPage) phishingPageSummary {

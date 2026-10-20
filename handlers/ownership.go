@@ -3,8 +3,10 @@ package handlers
 import (
 	"net/http"
 
-	"fishing-platform-backend/middleware"
-	"fishing-platform-backend/models"
+	"spearhook/middleware"
+	"spearhook/models"
+	"spearhook/platform"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -19,14 +21,11 @@ func currentUserOrAbort(c *gin.Context) (models.User, bool) {
 }
 
 func scopeByOwner(db *gorm.DB, user models.User) *gorm.DB {
-	if user.Role.IsAdmin() {
-		return db
-	}
-	return db.Where("created_by = ?", user.ID)
+	return platform.ScopeByOwner(db, user)
 }
 
 func canAccessOwned(user models.User, createdBy uint) bool {
-	return user.Role.IsAdmin() || createdBy == user.ID
+	return platform.CanAccessOwned(user, createdBy)
 }
 
 func denyUnlessOwned(c *gin.Context, createdBy uint) bool {

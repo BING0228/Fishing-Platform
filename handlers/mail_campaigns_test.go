@@ -11,12 +11,12 @@ import (
 	"testing"
 	"time"
 
-	"fishing-platform-backend/config"
-	"fishing-platform-backend/models"
-	"fishing-platform-backend/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
+	"spearhook/config"
+	"spearhook/models"
+	"spearhook/utils"
 )
 
 func setupMailCampaignTest(t *testing.T) models.User {

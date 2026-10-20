@@ -17,7 +17,7 @@ func InitEncryption(keyStr string) error {
 	
 	if keyStr == "" {
 		// Generate a default key from a fixed seed (NOT recommended for production)
-		seed := "fishing-platform-default-encryption-key-2024"
+		seed := "fishing-platform-default-encryption-key-2024" // legacy seed; do not rename (decrypts existing DBs)
 		hash := sha256.Sum256([]byte(seed))
 		key = hash[:]
 	} else {

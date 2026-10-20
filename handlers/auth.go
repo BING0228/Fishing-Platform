@@ -4,13 +4,13 @@ import (
 	"net/http"
 	"strings"
 
-	"fishing-platform-backend/audit"
-	"fishing-platform-backend/config"
-	"fishing-platform-backend/middleware"
-	"fishing-platform-backend/models"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
+	"spearhook/audit"
+	"spearhook/config"
+	"spearhook/middleware"
+	"spearhook/models"
 )
 
 // RegisterRequest represents the registration request

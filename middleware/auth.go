@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"fishing-platform-backend/config"
-	"fishing-platform-backend/models"
+	"spearhook/config"
+	"spearhook/models"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )

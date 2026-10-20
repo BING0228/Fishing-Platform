@@ -12,11 +12,11 @@ import (
 	"sync"
 	"time"
 
-	"fishing-platform-backend/config"
-	"fishing-platform-backend/models"
-	"fishing-platform-backend/utils"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"spearhook/config"
+	"spearhook/models"
+	"spearhook/utils"
 )
 
 var sendCampaignMailFn = utils.SendSMTPMail

@@ -6,11 +6,11 @@ import (
 	"net/mail"
 	"strings"
 
-	"fishing-platform-backend/config"
-	"fishing-platform-backend/models"
-	"fishing-platform-backend/utils"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"spearhook/config"
+	"spearhook/models"
+	"spearhook/utils"
 )
 
 type smtpServicePayload struct {
@@ -319,11 +319,11 @@ func TestSmtpService(c *gin.Context) {
 	}
 	subject := strings.TrimSpace(payload.Subject)
 	if subject == "" {
-		subject = "Fishing Platform SMTP test"
+		subject = "Spearhook SMTP test"
 	}
 	body := payload.Body
 	if strings.TrimSpace(body) == "" {
-		body = "This is a test email from Fishing Platform SMTP service \"" + service.Name + "\"."
+		body = "This is a test email from Spearhook SMTP service \"" + service.Name + "\"."
 	}
 
 	err := utils.SendSMTPMail(smtpConfigFromModel(*service), utils.SmtpMessage{

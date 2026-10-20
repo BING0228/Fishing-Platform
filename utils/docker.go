@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"fishing-platform-backend/config"
+	"spearhook/config"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"

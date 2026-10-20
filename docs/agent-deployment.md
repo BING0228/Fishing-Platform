@@ -1,8 +1,8 @@
-# Fishing Platform Agent 使用手册
+# Spearhook Agent 使用手册
 
 ## 1. 功能说明
 
-Fishing Platform Agent 是部署在远程节点上的页面运行程序，由主控端统一注册、调度和管理。
+Spearhook Agent 是部署在远程节点上的页面运行程序，由主控端统一注册、调度和管理。
 
 它支持：
 
@@ -91,26 +91,26 @@ POST /api/agent/deployments/{id}/logs/     上传项目日志
 `release/` 目录会同时生成主控端和 Agent 的多平台文件，例如：
 
 ```text
-fishing-agent-linux-amd64
-fishing-agent-linux-arm64
-fishing-agent-windows-amd64.exe
-fishing-agent-windows-arm64.exe
-fishing-agent-macos-amd64
-fishing-agent-macos-arm64
+spearhook-agent-linux-amd64
+spearhook-agent-linux-arm64
+spearhook-agent-windows-amd64.exe
+spearhook-agent-windows-arm64.exe
+spearhook-agent-macos-amd64
+spearhook-agent-macos-arm64
 agent.yaml.example
 ```
 
 ### 5.2 单独构建当前平台
 
 ```bash
-go build -o fishing-agent ./agent
+go build -o spearhook-agent ./agent
 ```
 
 ### 5.3 Linux AMD64 交叉构建
 
 ```bash
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-  go build -ldflags="-s -w" -o fishing-agent-linux-amd64 ./agent
+  go build -ldflags="-s -w" -o spearhook-agent-linux-amd64 ./agent
 ```
 
 ## 6. Agent 配置文件
@@ -142,14 +142,14 @@ Agent 配置文件仅保留上述两个必填项。项目运行端口由主控�
 Linux/macOS：
 
 ```bash
-chmod +x ./fishing-agent
-./fishing-agent -config ./agent.yaml
+chmod +x ./spearhook-agent
+./spearhook-agent -config ./agent.yaml
 ```
 
 Windows PowerShell：
 
 ```powershell
-.\fishing-agent-windows-amd64.exe -config .\agent.yaml
+.\spearhook-agent-windows-amd64.exe -config .\agent.yaml
 ```
 
 正常启动日志类似：
@@ -263,7 +263,7 @@ agent edge-agent-01 (agent_xxx) connected to https://platform.example.com
 典型目录结构：
 
 ```text
-/var/lib/fishing-agent/
+/var/lib/spearhook-agent/
 ├── state.json
 ├── runtime-state.json
 ├── pending-logs.json
@@ -294,40 +294,40 @@ agent edge-agent-01 (agent_xxx) connected to https://platform.example.com
 ### 10.1 创建用户和目录
 
 ```bash
-sudo useradd --system --home /var/lib/fishing-agent --shell /usr/sbin/nologin fishing-agent
-sudo mkdir -p /opt/fishing-agent /etc/fishing-agent /var/lib/fishing-agent
-sudo chown -R fishing-agent:fishing-agent /var/lib/fishing-agent
+sudo useradd --system --home /var/lib/spearhook-agent --shell /usr/sbin/nologin spearhook-agent
+sudo mkdir -p /opt/spearhook-agent /etc/spearhook-agent /var/lib/spearhook-agent
+sudo chown -R spearhook-agent:spearhook-agent /var/lib/spearhook-agent
 ```
 
 ### 10.2 安装文件
 
 ```bash
-sudo install -m 0755 fishing-agent-linux-amd64 /opt/fishing-agent/fishing-agent
-sudo install -m 0600 agent.yaml /etc/fishing-agent/agent.yaml
+sudo install -m 0755 spearhook-agent-linux-amd64 /opt/spearhook-agent/spearhook-agent
+sudo install -m 0600 agent.yaml /etc/spearhook-agent/agent.yaml
 ```
 
 确保配置中的工作目录为：
 
 ```yaml
-work_dir: /var/lib/fishing-agent
+work_dir: /var/lib/spearhook-agent
 ```
 
 ### 10.3 创建服务
 
-保存为 `/etc/systemd/system/fishing-agent.service`：
+保存为 `/etc/systemd/system/spearhook-agent.service`：
 
 ```ini
 [Unit]
-Description=Fishing Platform Agent
+Description=Spearhook Agent
 Wants=network-online.target
 After=network-online.target
 
 [Service]
 Type=simple
-User=fishing-agent
-Group=fishing-agent
-WorkingDirectory=/var/lib/fishing-agent
-ExecStart=/opt/fishing-agent/fishing-agent -config /etc/fishing-agent/agent.yaml
+User=spearhook-agent
+Group=spearhook-agent
+WorkingDirectory=/var/lib/spearhook-agent
+ExecStart=/opt/spearhook-agent/spearhook-agent -config /etc/spearhook-agent/agent.yaml
 Restart=always
 RestartSec=3
 LimitNOFILE=65535
@@ -340,9 +340,9 @@ WantedBy=multi-user.target
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable --now fishing-agent
-sudo systemctl status fishing-agent
-sudo journalctl -u fishing-agent -f
+sudo systemctl enable --now spearhook-agent
+sudo systemctl status spearhook-agent
+sudo journalctl -u spearhook-agent -f
 ```
 
 ## 11. Windows 启动
@@ -350,13 +350,13 @@ sudo journalctl -u fishing-agent -f
 前台运行：
 
 ```powershell
-.\fishing-agent-windows-amd64.exe -config C:\fishing-agent\agent.yaml
+.\spearhook-agent-windows-amd64.exe -config C:\spearhook-agent\agent.yaml
 ```
 
 可以使用 Windows Task Scheduler 或服务管理工具将该命令配置为开机启动。Agent 工作目录建议使用固定路径：
 
 ```yaml
-work_dir: C:\fishing-agent\data
+work_dir: C:\spearhook-agent\data
 ```
 
 ## 12. 防火墙配置
@@ -408,11 +408,11 @@ sudo firewall-cmd --reload
 推荐步骤：
 
 ```bash
-sudo systemctl stop fishing-agent
-sudo cp /opt/fishing-agent/fishing-agent /opt/fishing-agent/fishing-agent.bak
-sudo install -m 0755 ./fishing-agent-linux-amd64 /opt/fishing-agent/fishing-agent
-sudo systemctl start fishing-agent
-sudo systemctl status fishing-agent
+sudo systemctl stop spearhook-agent
+sudo cp /opt/spearhook-agent/spearhook-agent /opt/spearhook-agent/spearhook-agent.bak
+sudo install -m 0755 ./spearhook-agent-linux-amd64 /opt/spearhook-agent/spearhook-agent
+sudo systemctl start spearhook-agent
+sudo systemctl status spearhook-agent
 ```
 
 升级时不要删除：
@@ -445,13 +445,13 @@ projects/
 停止服务：
 
 ```bash
-sudo systemctl stop fishing-agent
+sudo systemctl stop spearhook-agent
 ```
 
 禁止开机启动：
 
 ```bash
-sudo systemctl disable fishing-agent
+sudo systemctl disable spearhook-agent
 ```
 
 完整卸载前，先在主控端取消该 Agent 上的项目部署，等待部署状态变为 `removed`，再删除程序和数据目录。
@@ -463,7 +463,7 @@ sudo systemctl disable fishing-agent
 检查：
 
 ```bash
-./fishing-agent -config ./agent.yaml
+./spearhook-agent -config ./agent.yaml
 ```
 
 重点确认：
@@ -478,8 +478,8 @@ sudo systemctl disable fishing-agent
 检查 Agent 进程和网络：
 
 ```bash
-sudo systemctl status fishing-agent
-sudo journalctl -u fishing-agent -n 200
+sudo systemctl status spearhook-agent
+sudo journalctl -u spearhook-agent -n 200
 curl -I https://platform.example.com
 ```
 
@@ -499,7 +499,7 @@ curl -I https://platform.example.com
 检查部署状态和监听端口：
 
 ```bash
-ss -lntp | grep fishing-agent
+ss -lntp | grep spearhook-agent
 ```
 
 同时确认：
@@ -547,26 +547,26 @@ no project port available for agent
 
 ```bash
 # 构建 Agent
-go build -o fishing-agent ./agent
+go build -o spearhook-agent ./agent
 
 # 查看参数
-./fishing-agent -h
+./spearhook-agent -h
 
 # 前台启动
-./fishing-agent -config ./agent.yaml
+./spearhook-agent -config ./agent.yaml
 
 # systemd 启动
-sudo systemctl start fishing-agent
+sudo systemctl start spearhook-agent
 
 # systemd 停止
-sudo systemctl stop fishing-agent
+sudo systemctl stop spearhook-agent
 
 # 查看状态
-sudo systemctl status fishing-agent
+sudo systemctl status spearhook-agent
 
 # 实时日志
-sudo journalctl -u fishing-agent -f
+sudo journalctl -u spearhook-agent -f
 
 # 查看监听端口
-ss -lntp | grep fishing-agent
+ss -lntp | grep spearhook-agent
 ```

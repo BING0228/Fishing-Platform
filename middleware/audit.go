@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"strings"
 
-	"fishing-platform-backend/audit"
-	"fishing-platform-backend/config"
-	"fishing-platform-backend/models"
+	"spearhook/audit"
+	"spearhook/config"
+	"spearhook/models"
 	"github.com/gin-gonic/gin"
 )
 

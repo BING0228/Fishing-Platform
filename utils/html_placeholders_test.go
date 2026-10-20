@@ -1,6 +1,9 @@
 package utils
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestApplyProjectHTMLPlaceholders(t *testing.T) {
 	in := `<form action="{{SUBMIT_URL}}"><a href="{{REDIRECT_URL}}">x</a>{{QR_RELAY_IMG}}</form>`
@@ -87,5 +90,18 @@ func TestLandingSubmitToken(t *testing.T) {
 	}
 	if got := LandingSubmitToken("https://custom.example/recv"); got != "https://custom.example/recv" {
 		t.Fatalf("custom: %q", got)
+	}
+}
+
+func TestApplyProjectHTMLPlaceholdersNormalizesQRSrc(t *testing.T) {
+	out := ApplyProjectHTMLPlaceholders(
+		`<div><img src="{{QR_RELAY_IMG}}" width="180"></div>`,
+		ProjectHTMLVars{QRRelayURL: "http://example.com/q/x.png"},
+	)
+	if !strings.Contains(out, `src="http://example.com/q/x.png"`) {
+		t.Fatalf("QR src not replaced: %s", out)
+	}
+	if strings.Contains(out, "<img src=\"<img") {
+		t.Fatalf("nested img from placeholder: %s", out)
 	}
 }

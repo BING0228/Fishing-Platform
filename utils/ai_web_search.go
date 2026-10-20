@@ -53,13 +53,17 @@ type InfoGatherInput struct {
 	Notes          string
 	IncludeXSearch bool
 	OnProgress     InfoGatherProgressFunc
+	// Searches lists enabled search profiles. Standalone providers are queried
+	// in parallel and merged; "auto" keeps the AI profile's native web_search
+	// path and is used as a fallback when all standalone providers fail.
+	Searches []SearchProviderConfig
 }
 
 // InfoGatherFindingDTO is one normalized finding from the model.
 type InfoGatherFindingDTO struct {
-	Kind       string `json:"kind"`
-	Value      string `json:"value"`
-	Label      string `json:"label"`
+	Kind      string `json:"kind"`
+	Value     string `json:"value"`
+	Label     string `json:"label"`
 	SourceURL string `json:"source_url"`
 	Snippet   string `json:"snippet"`
 }
@@ -81,6 +85,7 @@ type responsesRequest struct {
 
 type responsesAPIResponse struct {
 	Output json.RawMessage `json:"output"`
+	Usage  aiUsageJSON     `json:"usage"`
 	Error  json.RawMessage `json:"error"`
 	// Some gateways nest the assistant text here.
 	OutputText string `json:"output_text"`
@@ -92,11 +97,15 @@ const (
 	infoGatherModeGLMChatTool = "glm_chat_web_search"
 )
 
-// GatherContactsWithAI finds public contacts for a target via web search.
-//
-// Preferred path: POST {base_url}/responses with tools web_search (xAI/OpenAI-style).
-// Fallback (Zhipu GLM): POST {base_url}/chat/completions with tools web_search enable=true.
+// GatherContactsWithAI is the OpenAI-compatible compatibility wrapper.
 func GatherContactsWithAI(ctx context.Context, baseURL, apiKey, model string, timeout time.Duration, in InfoGatherInput) (InfoGatherResult, error) {
+	return GatherContactsWithAIFormat(ctx, AIAPIFormatOpenAI, baseURL, apiKey, model, timeout, in)
+}
+
+// GatherContactsWithAIFormat finds public contacts via the selected AI wire
+// format. OpenAI-compatible roots use /responses + web_search or Zhipu
+// chat+web_search; Anthropic roots use the server-side web_search tool.
+func GatherContactsWithAIFormat(ctx context.Context, apiFormat, baseURL, apiKey, model string, timeout time.Duration, in InfoGatherInput) (InfoGatherResult, error) {
 	var empty InfoGatherResult
 	if strings.TrimSpace(apiKey) == "" {
 		return empty, fmt.Errorf("AI API key is not configured")
@@ -104,7 +113,8 @@ func GatherContactsWithAI(ctx context.Context, baseURL, apiKey, model string, ti
 	if strings.TrimSpace(model) == "" {
 		model = defaultAIModelFallback()
 	}
-	baseURL = NormalizeOpenAICompatibleBaseURL(baseURL)
+	apiFormat = AIAPIFormatOrDefault(apiFormat)
+	baseURL = NormalizeAIBaseURL(apiFormat, baseURL)
 	if baseURL == "" {
 		return empty, fmt.Errorf("AI base URL is not configured")
 	}
@@ -121,6 +131,27 @@ func GatherContactsWithAI(ctx context.Context, baseURL, apiKey, model string, ti
 	}
 
 	reportInfoGatherProgress(in, "starting", 5, "Starting info gathering")
+
+	// Standalone providers (DeepSeek/Brave/Tavily/Serper/Bocha) search directly,
+	// then reuse the AI profile only to extract structured findings. When more
+	// than one is enabled they are queried in parallel and merged. "auto" is a
+	// fallback when every standalone provider fails.
+	standalone, hasAuto := splitSearchConfigs(in.Searches)
+	if len(standalone) > 0 {
+		result, err := gatherContactsViaSearchProviders(ctx, apiFormat, baseURL, apiKey, model, timeout, in, standalone)
+		if err == nil {
+			return result, nil
+		}
+		if !hasAuto {
+			return result, err
+		}
+		reportInfoGatherProgress(in, "searching", 30, "Standalone search failed; falling back to AI native web_search")
+	}
+
+	if apiFormat == AIAPIFormatAnthropic {
+		reportInfoGatherProgress(in, "searching", 25, "Calling Anthropic Messages API with web_search")
+		return gatherContactsViaAnthropicWebSearch(ctx, baseURL, apiKey, model, timeout, in)
+	}
 
 	// Zhipu GLM roots do not expose /responses; go straight to chat + web_search.
 	if prefersGLMWebSearch(baseURL) {
@@ -217,6 +248,7 @@ func gatherContactsViaResponses(ctx context.Context, baseURL, apiKey, model stri
 		}
 		return empty, fmt.Errorf("AI request failed with status %d: %s%s", resp.StatusCode, truncateForErr(string(body), 300), hint)
 	}
+	recordAIUsage(ctx, parsed.Usage.normalized())
 
 	text := strings.TrimSpace(parsed.OutputText)
 	if text == "" {
@@ -257,6 +289,7 @@ type glmChatWebSearchResponse struct {
 		Link    string `json:"link"`
 		Content string `json:"content"`
 	} `json:"web_search"`
+	Usage aiUsageJSON     `json:"usage"`
 	Error json.RawMessage `json:"error"`
 }
 
@@ -276,7 +309,7 @@ func gatherContactsViaGLMChatWebSearch(ctx context.Context, baseURL, apiKey, mod
 	if searchErr == nil && len(hits) > 0 {
 		reportInfoGatherProgress(in, "searching", 55, fmt.Sprintf("Collected %d search hits", len(hits)))
 		reportInfoGatherProgress(in, "synthesizing", 70, "Extracting emails and phones")
-		result, err := synthesizeFindingsFromSearchHits(ctx, baseURL, apiKey, model, timeout, in, hits)
+		result, err := synthesizeFindingsFromSearchHits(ctx, AIAPIFormatOpenAI, baseURL, apiKey, model, timeout, in, hits)
 		if err == nil {
 			reportInfoGatherProgress(in, "parsing", 90, "Validating email/phone findings")
 		}
@@ -353,6 +386,7 @@ func gatherContactsViaGLMChatWebSearch(ctx context.Context, baseURL, apiKey, mod
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return empty, fmt.Errorf("AI request failed with status %d: %s", resp.StatusCode, truncateForErr(string(body), 300))
 	}
+	recordAIUsage(ctx, parsed.Usage.normalized())
 
 	text := ""
 	if len(parsed.Choices) > 0 {
@@ -372,13 +406,106 @@ func gatherContactsViaGLMChatWebSearch(ctx context.Context, baseURL, apiKey, mod
 	return result, nil
 }
 
-func fetchGLMWebSearchHits(ctx context.Context, baseURL, apiKey string, in InfoGatherInput, timeout time.Duration) ([]glmWebSearchHit, error) {
+// gatherContactsViaSearchProvider runs a standalone search API for a few
+// target-focused queries, then asks the AI profile to extract findings.
+func gatherContactsViaSearchProviders(ctx context.Context, apiFormat, baseURL, apiKey, model string, timeout time.Duration, in InfoGatherInput, providers []SearchProviderConfig) (InfoGatherResult, error) {
+	var empty InfoGatherResult
+	queries := buildGLMSearchQueries(in)
+	if len(queries) == 0 {
+		return empty, fmt.Errorf("search query is empty")
+	}
+	label := searchProviderLabel(providers)
+	perQueryTimeout := timeout
+	if perQueryTimeout > 25*time.Second {
+		perQueryTimeout = 25 * time.Second
+	}
+	const maxHits = 20
+	hits := make([]SearchHit, 0, maxHits)
+	seen := map[string]struct{}{}
+	var lastErr error
+	for i, query := range queries {
+		percent := 20 + ((i+1)*35)/len(queries)
+		if percent > 55 {
+			percent = 55
+		}
+		reportInfoGatherProgress(in, "searching", percent, fmt.Sprintf("%s: %s", label, query))
+		found, errs := SearchWebAll(ctx, providers, query, perQueryTimeout)
+		for _, err := range errs {
+			lastErr = err
+		}
+		for _, hit := range found {
+			link := strings.TrimSpace(hit.URL)
+			if link == "" {
+				continue
+			}
+			if _, ok := seen[link]; ok {
+				continue
+			}
+			seen[link] = struct{}{}
+			hits = append(hits, hit)
+			if len(hits) >= maxHits {
+				break
+			}
+		}
+		if len(hits) >= maxHits {
+			break
+		}
+	}
+	if len(hits) == 0 {
+		if lastErr != nil {
+			return empty, fmt.Errorf("%s search failed: %w", label, lastErr)
+		}
+		return empty, fmt.Errorf("%s search returned no results", label)
+	}
+	reportInfoGatherProgress(in, "searching", 60, fmt.Sprintf("Collected %d search hits from %s", len(hits), label))
+	reportInfoGatherProgress(in, "synthesizing", 75, "Extracting emails and phones")
+	return synthesizeFindingsFromSearchHits(ctx, apiFormat, baseURL, apiKey, model, timeout, in, hits)
+}
+
+// splitSearchConfigs separates enabled standalone APIs from the native "auto"
+// fallback. Unknown providers are ignored.
+func splitSearchConfigs(cfgs []SearchProviderConfig) (standalone []SearchProviderConfig, hasAuto bool) {
+	for _, cfg := range cfgs {
+		provider := NormalizeSearchProvider(cfg.Provider)
+		if provider == SearchProviderAuto {
+			hasAuto = true
+			continue
+		}
+		if !IsStandaloneSearchProvider(provider) {
+			continue
+		}
+		cfg.Provider = provider
+		standalone = append(standalone, cfg)
+	}
+	return standalone, hasAuto
+}
+
+func searchProviderLabel(providers []SearchProviderConfig) string {
+	labels := make([]string, 0, len(providers))
+	for _, p := range providers {
+		label := NormalizeSearchProvider(p.Provider)
+		if label == "" {
+			label = "search"
+		}
+		labels = append(labels, label)
+	}
+	if len(labels) == 0 {
+		return "search"
+	}
+	out := strings.Join(labels, "+")
+	if len(out) > 80 {
+		out = out[:77] + "..."
+	}
+	return out
+}
+
+func fetchGLMWebSearchHits(ctx context.Context, baseURL, apiKey string, in InfoGatherInput, timeout time.Duration) ([]SearchHit, error) {
 	queries := buildGLMSearchQueries(in)
 	client := &http.Client{Timeout: timeout}
 	if timeout > 45*time.Second {
 		client.Timeout = 45 * time.Second
 	}
-	var all []glmWebSearchHit
+	var all []SearchHit
 	seen := map[string]struct{}{}
 	var lastErr error
 	for i, q := range queries {
@@ -437,7 +564,12 @@ func fetchGLMWebSearchHits(ctx context.Context, baseURL, apiKey string, in InfoG
 				continue
 			}
 			seen[link] = struct{}{}
-			all = append(all, hit)
+			all = append(all, SearchHit{
+				Title:   strings.TrimSpace(hit.Title),
+				URL:     link,
+				Snippet: truncateRunes(strings.TrimSpace(hit.Content), 400),
+				Content: strings.TrimSpace(hit.Content),
+			})
 		}
 	}
 	if len(all) == 0 {
@@ -479,7 +611,7 @@ func buildGLMSearchQueries(in InfoGatherInput) []string {
 	return out
 }
 
-func synthesizeFindingsFromSearchHits(ctx context.Context, baseURL, apiKey, model string, timeout time.Duration, in InfoGatherInput, hits []glmWebSearchHit) (InfoGatherResult, error) {
+func synthesizeFindingsFromSearchHits(ctx context.Context, apiFormat, baseURL, apiKey, model string, timeout time.Duration, in InfoGatherInput, hits []SearchHit) (InfoGatherResult, error) {
 	var empty InfoGatherResult
 	var b strings.Builder
 	b.WriteString(BuildInfoGatherUserPrompt(in))
@@ -490,62 +622,37 @@ func synthesizeFindingsFromSearchHits(ctx context.Context, baseURL, apiKey, mode
 	}
 	for i := 0; i < limit; i++ {
 		h := hits[i]
-		b.WriteString(fmt.Sprintf("[%d] title: %s\nlink: %s\nsnippet: %s\n\n", i+1, strings.TrimSpace(h.Title), strings.TrimSpace(h.Link), truncateForErr(strings.TrimSpace(h.Content), 400)))
+		content := h.Content
+		if strings.TrimSpace(content) == "" {
+			content = h.Snippet
+		}
+		b.WriteString(fmt.Sprintf("[%d] title: %s\nlink: %s\nsnippet: %s\n\n", i+1, strings.TrimSpace(h.Title), strings.TrimSpace(h.URL), truncateForErr(strings.TrimSpace(content), 400)))
 	}
 
-	payload := map[string]any{
-		"model": model,
-		"messages": []chatMessage{
-			{Role: "system", Content: InfoGatherSystemPrompt},
-			{Role: "user", Content: b.String()},
-		},
-		"temperature": 0,
-		"max_tokens":  4096,
-	}
-	raw, err := json.Marshal(payload)
+	aiText, err := CompleteAITextFormat(
+		ctx,
+		apiFormat,
+		baseURL,
+		apiKey,
+		model,
+		timeout,
+		InfoGatherSystemPrompt,
+		b.String(),
+		4096,
+		0,
+	)
 	if err != nil {
 		return empty, err
 	}
-	endpoint := baseURL + "/chat/completions"
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(raw))
-	if err != nil {
-		return empty, err
-	}
-	req.Header.Set("Authorization", "Bearer "+apiKey)
-	req.Header.Set("Content-Type", "application/json")
-	client := &http.Client{Timeout: timeout}
-	resp, err := client.Do(req)
-	if err != nil {
-		return empty, fmt.Errorf("AI request to %s failed: %w", endpoint, err)
-	}
-	defer resp.Body.Close()
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 12<<20))
-	if err != nil {
-		return empty, err
-	}
-	var parsed chatCompletionResponse
-	if err := json.Unmarshal(body, &parsed); err != nil {
-		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-			return empty, fmt.Errorf("AI request failed with status %d: %s", resp.StatusCode, truncateForErr(string(body), 300))
-		}
-		return empty, fmt.Errorf("invalid AI response: %w", err)
-	}
-	if errMsg := extractAIErrorMessage(parsed.Error); errMsg != "" {
-		return empty, fmt.Errorf("AI error: %s", errMsg)
-	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return empty, fmt.Errorf("AI request failed with status %d: %s", resp.StatusCode, truncateForErr(string(body), 300))
-	}
-	if len(parsed.Choices) == 0 || strings.TrimSpace(parsed.Choices[0].Message.Content) == "" {
+	text := strings.TrimSpace(aiText.Text)
+	if text == "" {
 		return empty, fmt.Errorf("AI returned empty content while synthesizing search hits")
 	}
-	text := strings.TrimSpace(parsed.Choices[0].Message.Content)
 	result, err := ParseInfoGatherJSON(text)
+	result.RawResponse = truncateRaw(text, infoGatherRawMax)
 	if err != nil {
-		result.RawResponse = truncateRaw(text, infoGatherRawMax)
 		return result, err
 	}
-	result.RawResponse = truncateRaw(text, infoGatherRawMax)
 	return result, nil
 }
 
@@ -560,6 +667,19 @@ func truncateRunes(s string, max int) string {
 	return string(r[:max])
 }
 
+// ProbeWebSearch is the OpenAI-compatible compatibility wrapper.
+func ProbeWebSearch(ctx context.Context, baseURL, apiKey, model string, timeout time.Duration) (ProbeWebSearchResult, error) {
+	return ProbeWebSearchFormat(ctx, AIAPIFormatOpenAI, baseURL, apiKey, model, timeout)
+}
+
+// ProbeWebSearchFormat verifies the selected wire format's web-search path.
+func ProbeWebSearchFormat(ctx context.Context, apiFormat, baseURL, apiKey, model string, timeout time.Duration) (ProbeWebSearchResult, error) {
+	if AIAPIFormatOrDefault(apiFormat) == AIAPIFormatAnthropic {
+		return probeAnthropicWebSearch(ctx, baseURL, apiKey, model, timeout)
+	}
+	return probeWebSearchOpenAI(ctx, baseURL, apiKey, model, timeout)
+}
+
 // ProbeWebSearchResult is returned by ProbeWebSearch / ProbeWebSearchResponses.
 type ProbeWebSearchResult struct {
 	Endpoint   string `json:"endpoint"`
@@ -571,7 +691,7 @@ type ProbeWebSearchResult struct {
 
 // ProbeWebSearch verifies Info Gathering web_search capability.
 // Order: Zhipu chat+web_search (for bigmodel roots) → Responses /responses → standalone /web_search.
-func ProbeWebSearch(ctx context.Context, baseURL, apiKey, model string, timeout time.Duration) (ProbeWebSearchResult, error) {
+func probeWebSearchOpenAI(ctx context.Context, baseURL, apiKey, model string, timeout time.Duration) (ProbeWebSearchResult, error) {
 	out := ProbeWebSearchResult{Model: strings.TrimSpace(model)}
 	if strings.TrimSpace(apiKey) == "" {
 		return out, fmt.Errorf("API key is required")
@@ -639,7 +759,7 @@ func probeResponsesWebSearch(ctx context.Context, baseURL, apiKey, model string,
 	out.Endpoint = endpoint
 
 	payload := map[string]any{
-		"model": model,
+		"model":        model,
 		"instructions": "You are a connectivity probe for web_search. Reply in one short sentence confirming whether web search worked.",
 		"input":        "Using the web_search tool, what organization operates example.com? Reply in under 20 words.",
 		"tools":        []map[string]any{{"type": "web_search"}},
@@ -764,11 +884,11 @@ func probeGLMStandaloneWebSearch(ctx context.Context, baseURL, apiKey, model str
 	out.Endpoint = endpoint
 
 	payload := map[string]any{
-		"search_query":         "example.com",
-		"search_engine":        "search_std",
-		"search_intent":        false,
-		"count":                1,
-		"content_size":         "medium",
+		"search_query":          "example.com",
+		"search_engine":         "search_std",
+		"search_intent":         false,
+		"count":                 1,
+		"content_size":          "medium",
 		"search_recency_filter": "noLimit",
 	}
 	raw, err := json.Marshal(payload)
@@ -802,9 +922,9 @@ func probeGLMStandaloneWebSearch(ctx context.Context, baseURL, apiKey, model str
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		var parsed struct {
-			Error json.RawMessage `json:"error"`
-			Msg   string          `json:"msg"`
-			Message string        `json:"message"`
+			Error   json.RawMessage `json:"error"`
+			Msg     string          `json:"msg"`
+			Message string          `json:"message"`
 		}
 		_ = json.Unmarshal(body, &parsed)
 		if errMsg := extractAIErrorMessage(parsed.Error); errMsg != "" {

@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-const firewallRuleCommentPrefix = "fishing-platform-ip-blacklist:"
+const firewallRuleCommentPrefix = "spearhook-ip-blacklist:"
 
 type firewallTarget struct {
 	command string

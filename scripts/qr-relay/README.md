@@ -26,7 +26,7 @@ python qr_relay.py -c config.yaml
 
 The script:
 
-- Uploads **image files only** to `POST /api/qr-relay/frames/`
+- Uploads the **QR area** to `POST /api/qr-relay/frames/` (auto-cropped; set `crop_to_qr: false` to upload the full frame)
 - Sends `POST /api/qr-relay/heartbeat/` when no new QR is uploaded (keeps console health online)
 - Re-decodes QR text on every capture and includes it as multipart field `payload`
 

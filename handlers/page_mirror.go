@@ -9,10 +9,10 @@ import (
 	"sync"
 	"time"
 
-	"fishing-platform-backend/config"
-	"fishing-platform-backend/models"
-	"fishing-platform-backend/utils"
 	"github.com/gin-gonic/gin"
+	"spearhook/config"
+	"spearhook/models"
+	"spearhook/utils"
 )
 
 type mirrorPageRequest struct {
@@ -110,7 +110,7 @@ func MirrorPhishingPage(c *gin.Context) {
 	if !emit(mirrorProgressEvent{Stage: "fetching", Percent: 20, Message: "Fetching target page"}) {
 		return
 	}
-	rawHTML, finalURL, err := utils.FetchURLHTML(c.Request.Context(), req.URL, 30*time.Second)
+	rawHTML, finalURL, err := utils.FetchURLHTMLForClone(c.Request.Context(), req.URL, 30*time.Second)
 	if err != nil {
 		fail("fetching", "Failed to fetch page: "+err.Error())
 		return
@@ -124,6 +124,7 @@ func MirrorPhishingPage(c *gin.Context) {
 	timeout := utils.AIRewriteTimeout(time.Duration(profile.TimeoutSec)*time.Second, len(aiHTML))
 	ctx, cancel := context.WithTimeout(c.Request.Context(), timeout+45*time.Second)
 	defer cancel()
+	ctx = utils.WithAIProfileID(ctx, profile.ID)
 
 	// Keepalive pings while AI may take a long time.
 	pingStop := make(chan struct{})
@@ -167,11 +168,16 @@ func MirrorPhishingPage(c *gin.Context) {
 	}) {
 		return
 	}
-	rewritten, err := utils.RewriteHTMLWithAI(ctx, profile.BaseURL, apiKey, profile.Model, timeout, utils.MirrorRewriteInput{
+	originalURL := req.URL
+	if finalURL != nil {
+		originalURL = finalURL.String()
+	}
+	rewritten, err := utils.RewriteHTMLWithAIFormat(ctx, profile.APIFormat, profile.BaseURL, apiKey, profile.Model, timeout, utils.MirrorRewriteInput{
 		RawHTML:      aiHTML,
 		SubmitURL:    submitURL,
 		RedirectURL:  redirectURL,
 		OriginalHost: originalHost,
+		OriginalURL:  originalURL,
 	})
 	if err != nil {
 		fail("rewriting", "AI rewrite failed: "+err.Error())
@@ -187,6 +193,11 @@ func MirrorPhishingPage(c *gin.Context) {
 	if err := utils.ValidateRewrittenHTML(rewritten, submitURL); err != nil {
 		fail("validating", "AI rewrite failed validation: "+err.Error())
 		return
+	}
+	if finalURL != nil {
+		rewritten = utils.AbsolutizeHTMLAssets(rewritten, finalURL.String())
+	} else {
+		rewritten = utils.AbsolutizeHTMLAssets(rewritten, req.URL)
 	}
 
 	name := strings.TrimSpace(req.Name)

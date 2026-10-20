@@ -1,10 +1,8 @@
 package handlers
 
 import (
-	"crypto/rand"
 	"crypto/sha256"
 	"crypto/subtle"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -14,13 +12,14 @@ import (
 	"strings"
 	"time"
 
-	"fishing-platform-backend/config"
-	"fishing-platform-backend/models"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"spearhook/config"
+	"spearhook/models"
+	"spearhook/platform"
 )
 
-const agentOfflineAfter = 60 * time.Second
+const agentOfflineAfter = platform.AgentOfflineAfter
 
 type agentRegisterRequest struct {
 	RegistrationToken string   `json:"registration_token"`
@@ -100,11 +99,7 @@ func hashAgentToken(token string) string {
 }
 
 func generateURLToken(prefix string, size int) (string, error) {
-	buf := make([]byte, size)
-	if _, err := rand.Read(buf); err != nil {
-		return "", err
-	}
-	return prefix + base64.RawURLEncoding.EncodeToString(buf), nil
+	return platform.GenerateURLToken(prefix, size)
 }
 
 func constantTimeEqual(left string, right string) bool {
@@ -170,10 +165,7 @@ func applyAgentHeartbeat(agent *models.Agent, req agentHeartbeatRequest, now tim
 }
 
 func currentAgentStatus(agent models.Agent, now time.Time) models.AgentStatus {
-	if agent.LastSeenAt == nil || now.Sub(*agent.LastSeenAt) > agentOfflineAfter {
-		return models.AgentStatusOffline
-	}
-	return models.AgentStatusOnline
+	return platform.CurrentAgentStatus(agent, now)
 }
 
 func toAgentResponse(agent models.Agent) agentResponse {
@@ -264,7 +256,9 @@ func RegisterAgent(c *gin.Context) {
 	result := db.Where("agent_id = ?", agentID).First(&agent)
 	if result.Error == nil {
 		applyAgentRegistration(&agent, req, agentToken, now)
-		if agent.IPAddress == "" { agent.IPAddress = c.ClientIP() }
+		if agent.IPAddress == "" {
+			agent.IPAddress = c.ClientIP()
+		}
 		if err := db.Save(&agent).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update agent"})
 			return
@@ -272,7 +266,9 @@ func RegisterAgent(c *gin.Context) {
 	} else if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		agent = models.Agent{AgentID: agentID}
 		applyAgentRegistration(&agent, req, agentToken, now)
-		if agent.IPAddress == "" { agent.IPAddress = c.ClientIP() }
+		if agent.IPAddress == "" {
+			agent.IPAddress = c.ClientIP()
+		}
 		if err := db.Create(&agent).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create agent"})
 			return
@@ -318,7 +314,9 @@ func AgentHeartbeat(c *gin.Context) {
 
 	now := time.Now()
 	applyAgentHeartbeat(agent, req, now)
-	if agent.IPAddress == "" { agent.IPAddress = c.ClientIP() }
+	if agent.IPAddress == "" {
+		agent.IPAddress = c.ClientIP()
+	}
 	db := config.GetDB()
 	if err := db.Save(agent).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update agent heartbeat"})

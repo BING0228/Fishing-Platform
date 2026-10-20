@@ -11,11 +11,11 @@ import (
 	"sync"
 	"time"
 
-	"fishing-platform-backend/config"
-	"fishing-platform-backend/models"
-	"fishing-platform-backend/utils"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"spearhook/config"
+	"spearhook/models"
+	"spearhook/utils"
 )
 
 type rewriteUploadRequest struct {
@@ -122,6 +122,7 @@ func RewriteUploadPhishingPage(c *gin.Context) {
 	timeout := utils.AIRewriteTimeout(time.Duration(profile.TimeoutSec)*time.Second, len(aiHTML))
 	ctx, cancel := context.WithTimeout(c.Request.Context(), timeout+45*time.Second)
 	defer cancel()
+	ctx = utils.WithAIProfileID(ctx, profile.ID)
 
 	pingStop := make(chan struct{})
 	defer close(pingStop)
@@ -164,11 +165,12 @@ func RewriteUploadPhishingPage(c *gin.Context) {
 	}) {
 		return
 	}
-	rewritten, err := utils.RewriteHTMLWithAI(ctx, profile.BaseURL, apiKey, profile.Model, timeout, utils.MirrorRewriteInput{
+	rewritten, err := utils.RewriteHTMLWithAIFormat(ctx, profile.APIFormat, profile.BaseURL, apiKey, profile.Model, timeout, utils.MirrorRewriteInput{
 		RawHTML:      aiHTML,
 		SubmitURL:    submitURL,
 		RedirectURL:  redirectURL,
 		OriginalHost: originalHost,
+		OriginalURL:  pageURL,
 	})
 	if err != nil {
 		fail("rewriting", "AI rewrite failed: "+err.Error())
@@ -184,6 +186,11 @@ func RewriteUploadPhishingPage(c *gin.Context) {
 	if err := utils.ValidateRewrittenHTML(rewritten, submitURL); err != nil {
 		fail("validating", "AI rewrite failed validation: "+err.Error())
 		return
+	}
+	if pageURL != "" {
+		rewritten = utils.AbsolutizeHTMLAssets(rewritten, pageURL)
+	} else if originalHost != "" {
+		rewritten = utils.AbsolutizeHTMLAssets(rewritten, "https://"+originalHost+"/")
 	}
 
 	desc := strings.TrimSpace(req.Description)

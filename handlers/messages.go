@@ -4,8 +4,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"fishing-platform-backend/models"
-	"fishing-platform-backend/config"
+	"spearhook/config"
+	"spearhook/models"
 )
 
 // CreateMessage creates a new message

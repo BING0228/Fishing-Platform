@@ -13,10 +13,35 @@ func TestBuildMirrorUserPromptIncludesPlatformFields(t *testing.T) {
 		SubmitURL:    "/api/submit",
 		RedirectURL:  "https://example.com",
 		OriginalHost: "login.example.com",
+		OriginalURL:  "https://login.example.com/ekp/login.jsp",
 	})
-	for _, want := range []string{"SUBMIT_URL: {{SUBMIT_URL}}", "username", "password", "captchavalue", "login.example.com"} {
+	for _, want := range []string{
+		"SUBMIT_URL: {{SUBMIT_URL}}",
+		"username",
+		"password",
+		"captchavalue",
+		"login.example.com",
+		"ORIGINAL_URL: https://login.example.com/ekp/login.jsp",
+		"绝对 URL",
+		"样式丢失",
+	} {
 		if !contains(prompt, want) {
 			t.Fatalf("prompt missing %q", want)
+		}
+	}
+}
+
+func TestMirrorSystemPromptRequiresAssetAbsolutization(t *testing.T) {
+	for _, want := range []string{
+		"静态资源绝对化",
+		"ORIGINAL_URL",
+		"stylesheet",
+		"url(",
+		"{{SUBMIT_URL}}",
+		"<base",
+	} {
+		if !contains(MirrorSystemPrompt, want) {
+			t.Fatalf("system prompt missing %q", want)
 		}
 	}
 }

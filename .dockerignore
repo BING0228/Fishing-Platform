@@ -1,0 +1,17 @@
+.git
+.gitignore
+release
+data
+backup
+qr_relays
+html_files
+fishing.db
+access-*.log
+admin_password.txt
+frontend/node_modules
+frontend/dist
+frontend-backups
+frontend-vue-superseded
+frontend-vue-before-react-*
+frontend-project-detail-*
+README.assets/backup

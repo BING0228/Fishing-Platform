@@ -35,7 +35,7 @@ func ApplyProjectHTMLPlaceholders(html string, vars ProjectHTMLVars) string {
 		qrImg = fmt.Sprintf(`<img src="%s" alt="qr" width="240" height="240" />`, qrURL)
 	}
 
-	out := PrepareLandingHTML(html)
+	out := NormalizeQRPlaceholderUsage(PrepareLandingHTML(html))
 	out = strings.ReplaceAll(out, PlaceholderSubmitURL, submit)
 	out = strings.ReplaceAll(out, PlaceholderRedirectURL, redirect)
 	out = strings.ReplaceAll(out, PlaceholderQRRelayURL, qrURL)

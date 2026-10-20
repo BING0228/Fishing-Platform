@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"fishing-platform-backend/config"
-	"fishing-platform-backend/models"
 	"github.com/gin-gonic/gin"
+	"spearhook/config"
+	"spearhook/models"
 )
 
 // ListAuditLogs returns paginated audit logs with filters.

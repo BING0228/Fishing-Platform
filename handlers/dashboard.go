@@ -4,11 +4,11 @@ import (
 	"net/http"
 	"time"
 
-	"fishing-platform-backend/config"
-	"fishing-platform-backend/hostmetrics"
-	"fishing-platform-backend/models"
-	"fishing-platform-backend/utils"
 	"github.com/gin-gonic/gin"
+	"spearhook/config"
+	"spearhook/hostmetrics"
+	"spearhook/models"
+	"spearhook/utils"
 )
 
 // GetStatistics retrieves dashboard statistics

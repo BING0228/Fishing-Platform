@@ -3,8 +3,8 @@ package middleware
 import (
 	"net/http"
 
-	"fishing-platform-backend/config"
-	"fishing-platform-backend/models"
+	"spearhook/config"
+	"spearhook/models"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 )

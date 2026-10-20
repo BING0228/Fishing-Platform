@@ -1,17 +1,16 @@
 package handlers
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
 
-	"fishing-platform-backend/config"
-	"fishing-platform-backend/models"
-	"fishing-platform-backend/utils"
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
+	"spearhook/config"
+	"spearhook/models"
+	"spearhook/platform"
+	"spearhook/utils"
 )
 
 type mailTrackingSettingsDTO struct {
@@ -102,38 +101,7 @@ func EnsureMailTrackingSettingForBoot() (*models.MailTrackingSetting, error) {
 }
 
 func ensureMailTrackingSetting() (*models.MailTrackingSetting, error) {
-	db := config.GetDB()
-	var row models.MailTrackingSetting
-	err := db.First(&row, 1).Error
-	if err == nil {
-		return &row, nil
-	}
-	if !errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, err
-	}
-
-	enabled := config.MailTrackingEnabled()
-	secretPlain := strings.TrimSpace(config.MailTrackingSecret())
-	enc := ""
-	if secretPlain != "" {
-		if e, eerr := utils.Encrypt(secretPlain); eerr == nil {
-			enc = e
-		}
-	}
-	hosts := config.MailTrackingAllowRedirectHosts()
-	row = models.MailTrackingSetting{
-		ID:                 1,
-		PublicBaseURL:      config.PublicBaseURL(),
-		Enabled:            enabled,
-		Secret:             enc,
-		AllowRedirectHosts: strings.Join(hosts, "\n"),
-		ClickPath:          "",
-		OpenPath:           "",
-	}
-	if err := db.Create(&row).Error; err != nil {
-		return nil, err
-	}
-	return &row, nil
+	return platform.EnsureMailTrackingSetting()
 }
 
 func toMailTrackingDTO(row *models.MailTrackingSetting) mailTrackingSettingsDTO {
@@ -149,49 +117,20 @@ func toMailTrackingDTO(row *models.MailTrackingSetting) mailTrackingSettingsDTO 
 }
 
 func decryptMailTrackingSecret(enc string) string {
-	enc = strings.TrimSpace(enc)
-	if enc == "" {
-		return ""
-	}
-	if dec, err := utils.Decrypt(enc); err == nil && dec != "" {
-		return dec
-	}
-	return enc
+	return platform.DecryptMailTrackingSecret(enc)
 }
 
 func splitHostLines(raw string) []string {
-	parts := strings.FieldsFunc(raw, func(r rune) bool {
-		return r == '\n' || r == '\r' || r == ',' || r == ';'
-	})
-	out := make([]string, 0, len(parts))
-	seen := map[string]bool{}
-	for _, p := range parts {
-		p = strings.ToLower(strings.TrimSpace(p))
-		if p == "" || seen[p] {
-			continue
-		}
-		seen[p] = true
-		out = append(out, p)
-	}
-	return out
+	return platform.SplitHostLines(raw)
 }
 
 func loadMailTrackingSetting() *models.MailTrackingSetting {
-	row, err := ensureMailTrackingSetting()
-	if err != nil {
-		return nil
-	}
-	return row
+	return platform.LoadMailTrackingSetting()
 }
 
 // EffectivePublicBaseURL prefers DB setting, then YAML, then empty.
 func EffectivePublicBaseURL() string {
-	if row := loadMailTrackingSetting(); row != nil {
-		if base := strings.TrimRight(strings.TrimSpace(row.PublicBaseURL), "/"); base != "" {
-			return base
-		}
-	}
-	return config.PublicBaseURL()
+	return platform.EffectivePublicBaseURL()
 }
 
 // requestPublicBaseURL is the http(s) origin to turn relative submit paths
@@ -217,41 +156,17 @@ func requestPublicBaseURL(c *gin.Context) string {
 
 // EffectiveMailTrackingEnabled prefers DB.
 func EffectiveMailTrackingEnabled() bool {
-	if row := loadMailTrackingSetting(); row != nil {
-		return row.Enabled
-	}
-	return config.MailTrackingEnabled()
+	return platform.EffectiveMailTrackingEnabled()
 }
 
 // EffectiveMailTrackingSecret prefers DB encrypted secret, then YAML/jwt fallback.
 func EffectiveMailTrackingSecret() string {
-	if row := loadMailTrackingSetting(); row != nil {
-		if plain := decryptMailTrackingSecret(row.Secret); plain != "" {
-			return plain
-		}
-	}
-	return config.MailTrackingSecret()
+	return platform.EffectiveMailTrackingSecret()
 }
 
 // EffectiveMailTrackingAllowRedirectHosts merges DB hosts with YAML hosts.
 func EffectiveMailTrackingAllowRedirectHosts() []string {
-	seen := map[string]bool{}
-	out := make([]string, 0)
-	add := func(list []string) {
-		for _, h := range list {
-			h = strings.ToLower(strings.TrimSpace(h))
-			if h == "" || seen[h] {
-				continue
-			}
-			seen[h] = true
-			out = append(out, h)
-		}
-	}
-	if row := loadMailTrackingSetting(); row != nil {
-		add(splitHostLines(row.AllowRedirectHosts))
-	}
-	add(config.MailTrackingAllowRedirectHosts())
-	return out
+	return platform.EffectiveMailTrackingAllowRedirectHosts()
 }
 
 // DispatchMailTracking routes GET /api/:slug to open/click handlers when the

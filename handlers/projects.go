@@ -16,11 +16,12 @@ import (
 	"strings"
 	"time"
 
-	"fishing-platform-backend/config"
-	"fishing-platform-backend/models"
-	"fishing-platform-backend/utils"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"spearhook/config"
+	"spearhook/models"
+	"spearhook/platform"
+	"spearhook/utils"
 )
 
 type robotSummary struct {
@@ -150,12 +151,12 @@ type projectHealthReportRequest struct {
 }
 
 const (
-	flaskRequirementsContent = "flask==2.2.2\nrequests==2.26.0\nWerkzeug==2.2.2\nflask-cors==4.0.0\n"
-	localContainerIDPrefix   = "local:"
-	maxHTMLUploadSizeBytes   = 30 << 20
+	flaskRequirementsContent = platform.FlaskRequirementsContent
+	localContainerIDPrefix   = platform.LocalContainerIDPrefix
+	maxHTMLUploadSizeBytes   = platform.MaxHTMLUploadSizeBytes
 )
 
-var errHTMLFileTooLarge = errors.New("HTML file exceeds the 30MB upload limit")
+var errHTMLFileTooLarge = platform.ErrHTMLFileTooLarge
 
 func toRobotSummaries(robots []models.Robot) []robotSummary {
 	summaries := make([]robotSummary, 0, len(robots))
@@ -346,76 +347,39 @@ func loadRobotsByIDs(db *gorm.DB, robotIDs []uint) ([]models.Robot, error) {
 }
 
 func normalizeRoutePath(value string, defaultValue string) string {
-	value = strings.TrimSpace(value)
-	if value == "" {
-		return defaultValue
-	}
-	if !strings.HasPrefix(value, "/") {
-		return "/" + value
-	}
-	return value
+	return platform.NormalizeRoutePath(value, defaultValue)
 }
 
 func normalizedProjectRunMode(value models.ProjectRunMode) models.ProjectRunMode {
-	switch value {
-	case models.ProjectRunModeLocal:
-		return models.ProjectRunModeLocal
-	case models.ProjectRunModeDocker:
-		return models.ProjectRunModeDocker
-	default:
-		return models.ProjectRunModeDocker
-	}
+	return platform.NormalizedProjectRunMode(value)
 }
 
 func parseProjectRunMode(value string) (models.ProjectRunMode, error) {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "", string(models.ProjectRunModeDocker):
-		return models.ProjectRunModeDocker, nil
-	case string(models.ProjectRunModeLocal):
-		return models.ProjectRunModeLocal, nil
-	default:
-		return "", fmt.Errorf("invalid run mode: %s", value)
-	}
+	return platform.ParseProjectRunMode(value)
 }
 
 func validateProjectName(value string) error {
-	name := strings.TrimSpace(value)
-	if name == "" {
-		return errors.New("project name is required")
-	}
-
-	for _, r := range name {
-		if !(r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || r == '-') {
-			return errors.New("project name must contain only English letters, numbers, and hyphens, without spaces or other special characters")
-		}
-	}
-
-	return nil
+	return platform.ValidateProjectName(value)
 }
 
 func hasProjectSSLCert(project models.Project) bool {
-	return strings.TrimSpace(project.SSLCertPath) != "" && strings.TrimSpace(project.SSLKeyPath) != ""
+	return platform.HasProjectSSLCert(project)
 }
 
 func localProjectAppDir(projectID uint) string {
-	return filepath.Join("data", "local_apps", fmt.Sprintf("project_%d", projectID))
+	return platform.LocalProjectAppDir(projectID)
 }
 
 func localProjectLogPath(projectID uint) string {
-	return filepath.Join(localProjectAppDir(projectID), "flask.log")
+	return platform.LocalProjectLogPath(projectID)
 }
 
 func makeLocalContainerID(pid int) string {
-	return fmt.Sprintf("%s%d", localContainerIDPrefix, pid)
+	return platform.MakeLocalContainerID(pid)
 }
 
 func parseLocalContainerPID(containerID string) (int, bool) {
-	if !strings.HasPrefix(containerID, localContainerIDPrefix) {
-		return 0, false
-	}
-
-	pid, err := strconv.Atoi(strings.TrimPrefix(containerID, localContainerIDPrefix))
-	return pid, err == nil && pid > 0
+	return platform.ParseLocalContainerPID(containerID)
 }
 
 func requestBackendBaseURL(c *gin.Context) string {
@@ -461,69 +425,7 @@ func projectServiceURL(c *gin.Context, project models.Project) string {
 }
 
 func prepareProjectRuntimeFiles(project *models.Project, targetDir string) (string, error) {
-	if strings.TrimSpace(targetDir) == "" {
-		return "", errors.New("runtime directory is required")
-	}
-	if project.HtmlFilePath == "" {
-		return "", errors.New("no HTML file uploaded")
-	}
-	if _, err := os.Stat(project.HtmlFilePath); err != nil {
-		return "", fmt.Errorf("HTML file not found: %w", err)
-	}
-
-	project.FrontendRoute = normalizeRoutePath(project.FrontendRoute, "/")
-	project.ContainerRoute = normalizeRoutePath(project.ContainerRoute, "/api/submit")
-
-	if err := os.RemoveAll(targetDir); err != nil {
-		return "", fmt.Errorf("failed to reset runtime directory: %w", err)
-	}
-
-	templatesDir := filepath.Join(targetDir, "templates")
-	staticDir := filepath.Join(targetDir, "static")
-	if err := os.MkdirAll(templatesDir, 0755); err != nil {
-		return "", fmt.Errorf("failed to create templates directory: %w", err)
-	}
-	if err := os.MkdirAll(staticDir, 0755); err != nil {
-		return "", fmt.Errorf("failed to create static directory: %w", err)
-	}
-
-	if err := writeProjectIndexHTML(project, filepath.Join(templatesDir, "index.html")); err != nil {
-		return "", fmt.Errorf("failed to write HTML file: %w", err)
-	}
-
-	robotConfigs := make([]utils.RobotConfig, len(project.Robots))
-	for i, robot := range project.Robots {
-		robotConfigs[i] = utils.RobotConfig{
-			ID:      robot.ID,
-			Webhook: robot.Webhook,
-			Type:    string(robot.RobotType),
-			Secret:  robot.Secret,
-		}
-	}
-
-	containerSecret := config.ContainerSecret()
-	if containerSecret == "" {
-		return "", errors.New("CONTAINER_SECRET is not configured")
-	}
-
-	containerCode := utils.GenerateContainerCode(
-		project.Name,
-		project.ID,
-		project.FrontendRoute,
-		project.ContainerRoute,
-		project.LoginURL,
-		containerSecret,
-		robotConfigs,
-	)
-
-	if err := os.WriteFile(filepath.Join(targetDir, "app.py"), []byte(containerCode), 0644); err != nil {
-		return "", fmt.Errorf("failed to write app.py: %w", err)
-	}
-	if err := os.WriteFile(filepath.Join(targetDir, "requirements.txt"), []byte(flaskRequirementsContent), 0644); err != nil {
-		return "", fmt.Errorf("failed to write requirements.txt: %w", err)
-	}
-
-	return containerCode, nil
+	return platform.PrepareProjectRuntimeFiles(project, targetDir)
 }
 
 func writeProjectIndexHTML(project *models.Project, dstPath string) error {
@@ -607,25 +509,7 @@ func saveUploadedHTMLFile(c *gin.Context) (string, error) {
 }
 
 func writePreparedHTMLFile(html string) (string, error) {
-	prepared := utils.PrepareLandingHTML(html)
-	if strings.TrimSpace(prepared) == "" {
-		return "", errors.New("HTML content is empty")
-	}
-	if len(prepared) > maxHTMLUploadSizeBytes {
-		return "", errHTMLFileTooLarge
-	}
-
-	uploadDir := "./data/html_files"
-	if err := os.MkdirAll(uploadDir, 0755); err != nil {
-		return "", err
-	}
-
-	filename := strconv.FormatInt(time.Now().UnixNano(), 10) + ".html"
-	filePath := filepath.Join(uploadDir, filename)
-	if err := os.WriteFile(filePath, []byte(prepared), 0644); err != nil {
-		return "", err
-	}
-	return filePath, nil
+	return platform.WritePreparedHTMLFile(html)
 }
 
 var errPhishingPageNotFound = errors.New("phishing page not found")
@@ -654,12 +538,7 @@ func resolveIncomingProjectHTML(c *gin.Context, db *gorm.DB, user models.User) (
 }
 
 func applyPhishingPageDefaults(project *models.Project, page *models.PhishingPage) {
-	if project == nil || page == nil {
-		return
-	}
-	if strings.TrimSpace(project.LoginURL) == "" && strings.TrimSpace(page.URL) != "" {
-		project.LoginURL = strings.TrimSpace(page.URL)
-	}
+	platform.ApplyPhishingPageDefaults(project, page)
 }
 
 func writeProjectHTMLHTTPError(c *gin.Context, err error) bool {
@@ -848,7 +727,11 @@ func CreateProject(c *gin.Context) {
 		project.BuildStatus = models.BuildStatusPending
 	}
 	if project.Port == 0 {
-		project.Port = 6000
+		project.Port = 8080
+	}
+	if err := platform.ValidatePublicPort(project.Port); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
 	}
 	project.DeploymentRevision = 1
 
@@ -1036,6 +919,13 @@ func UpdateProject(c *gin.Context) {
 		project.Robots = robots
 	}
 
+	if project.Port != 0 {
+		if err := platform.ValidatePublicPort(project.Port); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
 	if !ensureOwnedQrRelay(c, db, user, project.QrRelayID) {
 		return
 	}
@@ -1175,10 +1065,26 @@ func BuildProject(c *gin.Context) {
 		return
 	}
 
-	// Generate a task ID
-	taskID := "task_" + strconv.Itoa(int(project.ID)) + "_" + strconv.FormatInt(time.Now().Unix(), 10)
+	if project.RunMode == models.ProjectRunModeDocker {
+		if err := platform.StartDockerBuild(&project); err != nil {
+			status := http.StatusInternalServerError
+			var localErr *platform.LocalProjectError
+			if errors.As(err, &localErr) {
+				status = localErr.Status
+			}
+			c.JSON(status, gin.H{"status": "error", "msg": err.Error()})
+			return
+		}
+		c.JSON(http.StatusAccepted, gin.H{
+			"status":   "build_started",
+			"run_mode": project.RunMode,
+			"task_id":  project.TaskID,
+		})
+		return
+	}
 
-	// Update project with task ID and building status
+	// Local Flask: regenerate the runtime directory in the background.
+	taskID := "task_" + strconv.Itoa(int(project.ID)) + "_" + strconv.FormatInt(time.Now().Unix(), 10)
 	project.BuildStatus = models.BuildStatusBuilding
 	project.TaskID = taskID
 	project.DockerImage = ""
@@ -1186,15 +1092,7 @@ func BuildProject(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update project", "details": err.Error()})
 		return
 	}
-
-	// Start background build process
-	go func() {
-		if project.RunMode == models.ProjectRunModeLocal {
-			buildLocalProjectInBackground(db, project.ID, taskID)
-			return
-		}
-		buildProjectInBackground(db, project.ID, taskID)
-	}()
+	go buildLocalProjectInBackground(db, project.ID, taskID)
 
 	c.JSON(http.StatusAccepted, gin.H{
 		"status":   "build_started",
@@ -1548,7 +1446,11 @@ func StartLocalFlask(c *gin.Context) {
 	}
 
 	if project.Port == 0 {
-		project.Port = 6000
+		project.Port = 8080
+	}
+	if err := platform.ValidatePublicPort(project.Port); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "msg": err.Error()})
+		return
 	}
 
 	if project.ContainerStatus == models.ContainerStatusRunning && project.ContainerID != "" {
@@ -1764,6 +1666,10 @@ func StartContainer(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "msg": "已启用SSL，但项目未配置证书和私钥文件。"})
 		return
 	}
+	if err := platform.ValidatePublicPort(project.Port); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "msg": err.Error()})
+		return
+	}
 
 	// Initialize Docker client
 	log.Printf("[StartContainer] Connecting to Docker...")
@@ -1977,6 +1883,10 @@ func RestartContainer(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "msg": "已启用SSL，但项目未配置证书和私钥文件。"})
 		return
 	}
+	if err := platform.ValidatePublicPort(project.Port); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "msg": err.Error()})
+		return
+	}
 
 	dockerClient, err := utils.NewDockerClient()
 	if err != nil {
@@ -2087,7 +1997,7 @@ func projectProbeBaseURL(project models.Project) string {
 		protocol = "https"
 	}
 	if project.Port == 0 {
-		project.Port = 6000
+		project.Port = 8080
 	}
 	return fmt.Sprintf("%s://127.0.0.1:%d", protocol, project.Port)
 }
@@ -2208,7 +2118,7 @@ func inspectProjectRuntime(ctx context.Context, project models.Project) (bool, m
 func performProjectHealthCheck(ctx context.Context, project models.Project) models.ProjectHealthCheck {
 	project.RunMode = normalizedProjectRunMode(project.RunMode)
 	if project.Port == 0 {
-		project.Port = 6000
+		project.Port = 8080
 	}
 
 	checkedAt := time.Now()

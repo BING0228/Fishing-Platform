@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"fishing-platform-backend/utils"
+	"spearhook/utils"
 )
 
 func main() {

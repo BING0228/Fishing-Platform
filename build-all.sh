@@ -43,12 +43,12 @@ rm -rf release/*
 # Build targets: GOOS GOARCH output_name
 # Keep this list Bash 3 compatible for the default macOS /bin/bash.
 TARGETS="
-linux amd64 fishing-platform-linux-amd64
-linux arm64 fishing-platform-linux-arm64
-windows amd64 fishing-platform-windows-amd64.exe
-windows arm64 fishing-platform-windows-arm64.exe
-darwin amd64 fishing-platform-macos-amd64
-darwin arm64 fishing-platform-macos-arm64
+linux amd64 spearhook-linux-amd64
+linux arm64 spearhook-linux-arm64
+windows amd64 spearhook-windows-amd64.exe
+windows arm64 spearhook-windows-arm64.exe
+darwin amd64 spearhook-macos-amd64
+darwin arm64 spearhook-macos-arm64
 "
 
 # Build for each platform
@@ -65,7 +65,7 @@ while read -r os arch binary; do
         echo -e "${YELLOW}❌ Build failed for $os${NC}"
     fi
 
-	agent_binary="${binary/fishing-platform/fishing-agent}"
+	agent_binary="${binary/spearhook/spearhook-agent}"
 	GOOS=$os GOARCH=$arch CGO_ENABLED=0 go build -ldflags="-s -w" -o "release/${agent_binary}" ./agent
 	if [ -f "release/${agent_binary}" ]; then
 		SIZE=$(du -h "release/${agent_binary}" | cut -f1)
@@ -89,10 +89,10 @@ echo "Release files:"
 ls -lh release/
 echo ""
 echo "To run on each platform:"
-echo "  Linux AMD64:    ./release/fishing-platform-linux-amd64"
-echo "  Linux ARM64:    ./release/fishing-platform-linux-arm64"
-echo "  Windows AMD64:  release\\fishing-platform-windows-amd64.exe"
-echo "  Windows ARM64:  release\\fishing-platform-windows-arm64.exe"
-echo "  macOS AMD64:    ./release/fishing-platform-macos-amd64"
-echo "  macOS ARM64:    ./release/fishing-platform-macos-arm64"
+echo "  Linux AMD64:    ./release/spearhook-linux-amd64"
+echo "  Linux ARM64:    ./release/spearhook-linux-arm64"
+echo "  Windows AMD64:  release\\spearhook-windows-amd64.exe"
+echo "  Windows ARM64:  release\\spearhook-windows-arm64.exe"
+echo "  macOS AMD64:    ./release/spearhook-macos-amd64"
+echo "  macOS ARM64:    ./release/spearhook-macos-arm64"
 echo ""

@@ -63,17 +63,35 @@ def grab_frame(region: dict[str, int] | None) -> Image.Image:
         return Image.frombytes("RGB", shot.size, shot.bgra, "raw", "BGRX")
 
 
-def decode_payloads(image: Image.Image) -> list[str]:
+def decode_qr_results(image: Image.Image) -> list[tuple[str, tuple[int, int, int, int]]]:
     results = zbar_decode(image)
-    out: list[str] = []
+    out: list[tuple[str, tuple[int, int, int, int]]] = []
     for item in results:
         try:
             text = item.data.decode("utf-8", errors="replace").strip()
         except Exception:
             continue
-        if text:
-            out.append(text)
+        if not text:
+            continue
+        rect = item.rect
+        out.append((text, (int(rect.left), int(rect.top), int(rect.width), int(rect.height))))
     return out
+
+
+def decode_payloads(image: Image.Image) -> list[str]:
+    return [payload for payload, _ in decode_qr_results(image)]
+
+
+def crop_qr(image: Image.Image, box: tuple[int, int, int, int], margin_ratio: float = 0.12) -> Image.Image:
+    left, top, width, height = box
+    if width <= 0 or height <= 0:
+        return image
+    margin = max(8, int(max(width, height) * margin_ratio))
+    l = max(0, left - margin)
+    t = max(0, top - margin)
+    r = min(image.width, left + width + margin)
+    b = min(image.height, top + height + margin)
+    return image.crop((l, t, r, b))
 
 
 def image_fingerprint(png_bytes: bytes, payload: str) -> str:
@@ -229,6 +247,7 @@ def main() -> int:
     if region is not None and not isinstance(region, dict):
         print("region must be a mapping or omitted", file=sys.stderr)
         return 1
+    crop_to_qr = bool(cfg.get("crop_to_qr", True))
 
     if not platform_url or not token:
         print("platform_url and upload_token are required", file=sys.stderr)
@@ -245,7 +264,7 @@ def main() -> int:
         try:
             now = time.time()
             frame = grab_frame(region if isinstance(region, dict) else None)
-            payloads = decode_payloads(frame)
+            payloads = decode_qr_results(frame)
             if not payloads:
                 if heartbeat_ms > 0 and (now - last_heartbeat) * 1000 >= heartbeat_ms:
                     send_heartbeat(platform_url, token, verify_tls)
@@ -253,7 +272,10 @@ def main() -> int:
                     print("[qr-relay] heartbeat (no QR in frame)")
                 time.sleep(max(interval_ms, 100) / 1000.0)
                 continue
-            payload = payloads[0]
+            payloads.sort(key=lambda item: item[1][2] * item[1][3], reverse=True)
+            payload, box = payloads[0]
+            if crop_to_qr:
+                frame = crop_qr(frame, box)
             png_bytes = to_png_bytes(frame)
             fp = image_fingerprint(png_bytes, payload)
             if dedupe and fp == last_fp:

@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"fishing-platform-backend/models"
+	"spearhook/models"
 )
 
 func TestDownsampleHostMetricSamples(t *testing.T) {

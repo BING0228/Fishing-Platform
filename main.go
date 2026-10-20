@@ -6,18 +6,17 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 
-	"fishing-platform-backend/config"
-	"fishing-platform-backend/handlers"
-	"fishing-platform-backend/hostmetrics"
-	"fishing-platform-backend/middleware"
-	"fishing-platform-backend/models"
-	"fishing-platform-backend/utils"
+	"spearhook/config"
+	"spearhook/handlers"
+	"spearhook/hostmetrics"
+	"spearhook/middleware"
+	"spearhook/models"
+	"spearhook/utils"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -26,6 +25,7 @@ import (
 
 // all: includes _next and other underscore-prefixed paths that plain
 // go:embed directory patterns skip (otherwise the SPA JS/CSS 404).
+//
 //go:embed all:frontend/dist
 var frontendFS embed.FS
 
@@ -123,7 +123,7 @@ func main() {
 	}
 
 	checks = append(checks, ensureDefaultAdmin())
-	checks = append(checks, probeDockerTCPPort("127.0.0.1:2375"))
+	checks = append(checks, probeDockerEndpoint())
 	checks = append(checks, checkRequiredDockerImage())
 
 	accessLogDir := utils.DefaultAccessLogDir(dbPath)
@@ -220,6 +220,27 @@ func main() {
 			both(aiSettings, http.MethodGet, "/", handlers.GetAISettings)
 			both(aiSettings, http.MethodPut, "/", handlers.UpdateAISettings)
 			both(aiSettings, http.MethodPost, "/test/", handlers.TestAISettings)
+		}
+
+		searchSettings := protected.Group("/search-settings")
+		searchSettings.Use(middleware.RequireAdmin())
+		{
+			both(searchSettings, http.MethodGet, "/", handlers.GetSearchSettings)
+			both(searchSettings, http.MethodPut, "/", handlers.UpdateSearchSettings)
+			both(searchSettings, http.MethodPost, "/test/", handlers.TestSearchSettings)
+		}
+
+		chat := protected.Group("/chat")
+		{
+			both(chat, http.MethodGet, "/playbooks/", handlers.ListChatPlaybooks)
+			both(chat, http.MethodGet, "/sessions/", handlers.ListChatSessions)
+			both(chat, http.MethodPost, "/sessions/", handlers.CreateChatSession)
+			both(chat, http.MethodGet, "/sessions/:id/messages/", handlers.GetChatMessages)
+			both(chat, http.MethodGet, "/sessions/:id/events/", handlers.StreamChatEvents)
+			both(chat, http.MethodDelete, "/sessions/:id/", handlers.DeleteChatSession)
+			both(chat, http.MethodPost, "/sessions/:id/messages/", handlers.SendChatMessage)
+			both(chat, http.MethodPost, "/sessions/:id/confirm/", handlers.ConfirmChatTool)
+			both(chat, http.MethodPost, "/sessions/:id/tools/:tool_call_id/retry/", handlers.RetryChatTool)
 		}
 
 		mailTracking := protected.Group("/mail-tracking-settings")
@@ -497,16 +518,16 @@ func confirmInsecureSecuritySettings(issues []config.InsecureSecuritySetting) bo
 	return true
 }
 
-func probeDockerTCPPort(address string) utils.StartupCheck {
-	conn, err := net.DialTimeout("tcp", address, 3*time.Second)
+func probeDockerEndpoint() utils.StartupCheck {
+	cli, err := utils.NewDockerClient()
 	if err != nil {
 		return utils.StartupCheck{
-			Name: "Docker endpoint", OK: false, Detail: address + " unreachable",
+			Name: "Docker endpoint", OK: false, Detail: err.Error(),
 		}
 	}
-	_ = conn.Close()
+	_ = cli.Close()
 	return utils.StartupCheck{
-		Name: "Docker endpoint", OK: true, Detail: address + " reachable",
+		Name: "Docker endpoint", OK: true, Detail: "reachable",
 	}
 }
 
@@ -592,7 +613,7 @@ func ensureDefaultAdmin() utils.StartupCheck {
 		dataDir = "."
 	}
 	passwordFile := dataDir + "/admin_password.txt"
-	content := fmt.Sprintf("Fishing Platform Admin Credentials\n================================\nUsername: admin\nPassword: %s\nGenerated: %s\n\nIMPORTANT: Please save this password and delete this file after logging in.\n",
+	content := fmt.Sprintf("Spearhook Admin Credentials\n================================\nUsername: admin\nPassword: %s\nGenerated: %s\n\nIMPORTANT: Please save this password and delete this file after logging in.\n",
 		password, time.Now().Format("2006-01-02 15:04:05"))
 
 	if err := os.WriteFile(passwordFile, []byte(content), 0600); err != nil {

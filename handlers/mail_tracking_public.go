@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"fishing-platform-backend/config"
-	"fishing-platform-backend/models"
-	"fishing-platform-backend/utils"
 	"github.com/gin-gonic/gin"
+	"spearhook/config"
+	"spearhook/models"
+	"spearhook/utils"
 )
 
 // 1x1 transparent GIF

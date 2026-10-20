@@ -4,13 +4,13 @@ import (
 	"net/http"
 	"strings"
 
-	"fishing-platform-backend/config"
-	"fishing-platform-backend/middleware"
-	"fishing-platform-backend/models"
-	"fishing-platform-backend/utils"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
+	"spearhook/config"
+	"spearhook/middleware"
+	"spearhook/models"
+	"spearhook/utils"
 )
 
 type userPublic struct {

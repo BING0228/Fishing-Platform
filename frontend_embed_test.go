@@ -7,7 +7,7 @@ import (
 )
 
 func TestFrontendEmbedIncludesNextAssets(t *testing.T) {
-	var chunkJS, chunkCSS, loginCover bool
+	var chunkJS, staticCSS, loginCover bool
 	err := fs.WalkDir(frontendFS, "frontend/dist", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -18,8 +18,10 @@ func TestFrontendEmbedIncludesNextAssets(t *testing.T) {
 		if strings.Contains(path, "/_next/static/chunks/") && strings.HasSuffix(path, ".js") {
 			chunkJS = true
 		}
-		if strings.Contains(path, "/_next/static/chunks/") && strings.HasSuffix(path, ".css") {
-			chunkCSS = true
+		// Turbopack emits CSS under chunks/, webpack under css/. Both are served
+		// by the /_next/* static handler.
+		if strings.Contains(path, "/_next/static/") && strings.HasSuffix(path, ".css") {
+			staticCSS = true
 		}
 		if strings.HasSuffix(path, "/login-cover.jpg") {
 			loginCover = true
@@ -32,8 +34,8 @@ func TestFrontendEmbedIncludesNextAssets(t *testing.T) {
 	if !chunkJS {
 		t.Fatal("embedded frontendFS missing _next/static/chunks/*.js; use //go:embed all:frontend/dist")
 	}
-	if !chunkCSS {
-		t.Fatal("embedded frontendFS missing _next/static/chunks/*.css; use //go:embed all:frontend/dist")
+	if !staticCSS {
+		t.Fatal("embedded frontendFS missing _next/static/**/*.css; use //go:embed all:frontend/dist")
 	}
 	if !loginCover {
 		t.Fatal("embedded frontendFS missing login-cover.jpg (LoginPage background)")

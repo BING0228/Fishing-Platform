@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"strings"
 
-	"fishing-platform-backend/config"
-	"fishing-platform-backend/models"
 	"github.com/gin-gonic/gin"
+	"spearhook/config"
+	"spearhook/models"
 )
 
 type mailTemplatePayload struct {

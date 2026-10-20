@@ -35,10 +35,11 @@ release/
 build/
 dist/
 frontend/dist/
-fishing-platform
-fishing-platform.exe
-fishing-agent
-fishing-agent.exe
+frontend/demo-dist/
+spearhook
+spearhook.exe
+spearhook-agent
+spearhook-agent.exe
 *.exe
 
 # Local frontend backups / superseded trees (not part of the product)
@@ -53,6 +54,9 @@ docs/chat-console-plan.md
 docs/*-plan.md
 docs/*-product-design.md
 docs/*-experience.md
+
+# Local audit/security reviews (internal, do not publish)
+docs/*-review.md
 README.assets/backup/
 
 # Dependencies and package-manager caches
@@ -80,3 +84,13 @@ scripts/qr-relay/.venv/
 
 # Local frontend design backups
 backups/
+
+# Legacy binary names
+fishing-platform
+fishing-platform.exe
+fishing-agent
+fishing-agent.exe
+images/
+html_files/
+qr_relays/
+admin_password.txt

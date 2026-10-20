@@ -1,28 +1,16 @@
 package handlers
 
 import (
-	"context"
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
-	"fishing-platform-backend/config"
-	"fishing-platform-backend/models"
-	"fishing-platform-backend/utils"
+	"spearhook/config"
+	"spearhook/models"
+	"spearhook/platform"
+
 	"github.com/gin-gonic/gin"
-)
-
-const (
-	infoGatherMaxConcurrent = 3
-	infoGatherDefaultTimeout = 180 * time.Second
-)
-
-var (
-	infoGatherSem     = make(chan struct{}, infoGatherMaxConcurrent)
-	infoGatherRunMu   sync.Mutex
-	infoGatherRunning = map[uint]struct{}{}
 )
 
 type createInfoGatherJobRequest struct {
@@ -117,7 +105,7 @@ func CreateInfoGatherJob(c *gin.Context) {
 		return
 	}
 
-	go runInfoGatherJob(job.ID)
+	platform.StartInfoGatherJob(job.ID)
 	c.JSON(http.StatusCreated, job)
 }
 
@@ -164,7 +152,7 @@ func RetryInfoGatherJob(c *gin.Context) {
 		return
 	}
 	_ = db.First(&job, job.ID)
-	go runInfoGatherJob(job.ID)
+	platform.StartInfoGatherJob(job.ID)
 	c.JSON(http.StatusOK, job)
 }
 
@@ -218,171 +206,4 @@ func loadInfoGatherJobOwned(c *gin.Context) (models.InfoGatherJob, bool) {
 		return models.InfoGatherJob{}, false
 	}
 	return job, true
-}
-
-func runInfoGatherJob(jobID uint) {
-	infoGatherRunMu.Lock()
-	if _, busy := infoGatherRunning[jobID]; busy {
-		infoGatherRunMu.Unlock()
-		return
-	}
-	infoGatherRunning[jobID] = struct{}{}
-	infoGatherRunMu.Unlock()
-	defer func() {
-		infoGatherRunMu.Lock()
-		delete(infoGatherRunning, jobID)
-		infoGatherRunMu.Unlock()
-	}()
-
-	infoGatherSem <- struct{}{}
-	defer func() { <-infoGatherSem }()
-
-	db := config.GetDB()
-	var job models.InfoGatherJob
-	if err := db.First(&job, jobID).Error; err != nil {
-		return
-	}
-
-	now := time.Now()
-	_ = db.Model(&job).Updates(map[string]any{
-		"status":           models.InfoGatherJobRunning,
-		"started_at":       now,
-		"updated_at":       now,
-		"progress_stage":   "starting",
-		"progress_percent": 5,
-		"progress_message": "Starting info gathering",
-	}).Error
-
-	profile, apiKey, active := ActiveAIConfig()
-	if !active || strings.TrimSpace(apiKey) == "" {
-		finishInfoGatherJob(jobID, models.InfoGatherJobFailed, "No AI model is enabled", "", nil, "")
-		return
-	}
-
-	timeout := time.Duration(profile.TimeoutSec) * time.Second
-	if timeout <= 0 {
-		timeout = infoGatherDefaultTimeout
-	}
-	if timeout < 120*time.Second {
-		timeout = 120 * time.Second
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), timeout+30*time.Second)
-	defer cancel()
-
-	setProgress := func(stage string, percent int, message string) {
-		_ = db.Model(&models.InfoGatherJob{}).Where("id = ?", jobID).Updates(map[string]any{
-			"progress_stage":   stage,
-			"progress_percent": percent,
-			"progress_message": message,
-			"updated_at":       time.Now(),
-		}).Error
-	}
-
-	result, err := utils.GatherContactsWithAI(ctx, profile.BaseURL, apiKey, profile.Model, timeout, utils.InfoGatherInput{
-		Target:         job.Target,
-		Notes:          job.Notes,
-		IncludeXSearch: job.IncludeXSearch,
-		OnProgress:     setProgress,
-	})
-
-	if err != nil && len(result.Findings) == 0 {
-		finishInfoGatherJob(jobID, models.InfoGatherJobFailed, err.Error(), result.RawResponse, nil, result.Notes)
-		return
-	}
-
-	status := models.InfoGatherJobSucceeded
-	errMsg := ""
-	if err != nil {
-		status = models.InfoGatherJobPartial
-		errMsg = err.Error()
-	}
-
-	setProgress("saving", 95, "Saving email/phone findings")
-	findings := make([]models.InfoGatherFinding, 0, len(result.Findings))
-	for _, f := range result.Findings {
-		if f.Kind != "email" && f.Kind != "phone" {
-			continue
-		}
-		findings = append(findings, models.InfoGatherFinding{
-			JobID:     jobID,
-			Kind:      f.Kind,
-			Value:     f.Value,
-			Label:     f.Label,
-			SourceURL: f.SourceURL,
-			Snippet:   f.Snippet,
-		})
-	}
-	finishInfoGatherJob(jobID, status, errMsg, result.RawResponse, findings, result.Notes)
-}
-
-func finishInfoGatherJob(jobID uint, status models.InfoGatherJobStatus, errMsg, raw string, findings []models.InfoGatherFinding, notes string) {
-	db := config.GetDB()
-	tx := db.Begin()
-	if tx.Error != nil {
-		return
-	}
-
-	emailCount, phoneCount := 0, 0
-	if len(findings) > 0 {
-		_ = tx.Where("job_id = ?", jobID).Delete(&models.InfoGatherFinding{})
-		for i := range findings {
-			findings[i].JobID = jobID
-			if err := tx.Create(&findings[i]).Error; err != nil {
-				// unique conflict → skip duplicate
-				continue
-			}
-			switch findings[i].Kind {
-			case "email":
-				emailCount++
-			case "phone":
-				phoneCount++
-			}
-		}
-	} else {
-		var existing []models.InfoGatherFinding
-		_ = tx.Where("job_id = ?", jobID).Find(&existing).Error
-		for _, f := range existing {
-			switch f.Kind {
-			case "email":
-				emailCount++
-			case "phone":
-				phoneCount++
-			}
-		}
-		findings = existing
-	}
-
-	finished := time.Now()
-	updates := map[string]any{
-		"status":           status,
-		"error_message":    errMsg,
-		"raw_response":     raw,
-		"summary_notes":    notes,
-		"email_count":      emailCount,
-		"phone_count":      phoneCount,
-		"finding_count":    len(findings),
-		"progress_percent": 100,
-		"finished_at":      finished,
-		"updated_at":       finished,
-	}
-	switch status {
-	case models.InfoGatherJobFailed:
-		updates["progress_message"] = errMsg
-		if errMsg == "" {
-			updates["progress_message"] = "Failed"
-		}
-		// Keep progress_stage at the step that failed (already written by OnProgress).
-	case models.InfoGatherJobPartial:
-		updates["progress_stage"] = "done"
-		updates["progress_message"] = "Completed with warnings"
-	default:
-		updates["progress_stage"] = "done"
-		updates["progress_message"] = "Completed"
-	}
-	if err := tx.Model(&models.InfoGatherJob{}).Where("id = ?", jobID).Updates(updates).Error; err != nil {
-		tx.Rollback()
-		return
-	}
-	_ = tx.Commit()
 }

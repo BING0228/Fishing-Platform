@@ -10,11 +10,11 @@ import (
 	"strings"
 	"time"
 
-	"fishing-platform-backend/config"
-	"fishing-platform-backend/models"
-	"fishing-platform-backend/utils"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"spearhook/config"
+	"spearhook/models"
+	"spearhook/utils"
 )
 
 const qrRelayUploadDir = "./data/qr_relays"
@@ -25,25 +25,25 @@ type createQrRelayRequest struct {
 }
 
 type qrRelayDTO struct {
-	ID           uint       `json:"id"`
-	Name         string     `json:"name"`
-	Slug         string     `json:"slug"`
-	Enabled      bool       `json:"enabled"`
-	ContentType  string     `json:"content_type"`
-	ImageBytes   int64      `json:"image_bytes"`
-	Payload      string     `json:"payload"`
-	HasImage     bool       `json:"has_image"`
-	PublicURL    string     `json:"public_url"`
-	PublicPath   string     `json:"public_path"`
-	PlaceholderURL string   `json:"placeholder_url"` // {{QR_RELAY_URL}} value
-	PlaceholderImg string   `json:"placeholder_img"` // {{QR_RELAY_IMG}} value
-	LastUploadAt *time.Time `json:"last_upload_at"`
-	LastSeenAt   *time.Time `json:"last_seen_at"`
-	UploadCount  int64      `json:"upload_count"`
-	Health       string     `json:"health"` // online|stale|paused|empty
-	CreatedBy    uint       `json:"created_by"`
-	CreatedAt    time.Time  `json:"created_at"`
-	UpdatedAt    time.Time  `json:"updated_at"`
+	ID             uint       `json:"id"`
+	Name           string     `json:"name"`
+	Slug           string     `json:"slug"`
+	Enabled        bool       `json:"enabled"`
+	ContentType    string     `json:"content_type"`
+	ImageBytes     int64      `json:"image_bytes"`
+	Payload        string     `json:"payload"`
+	HasImage       bool       `json:"has_image"`
+	PublicURL      string     `json:"public_url"`
+	PublicPath     string     `json:"public_path"`
+	PlaceholderURL string     `json:"placeholder_url"` // {{QR_RELAY_URL}} value
+	PlaceholderImg string     `json:"placeholder_img"` // {{QR_RELAY_IMG}} value
+	LastUploadAt   *time.Time `json:"last_upload_at"`
+	LastSeenAt     *time.Time `json:"last_seen_at"`
+	UploadCount    int64      `json:"upload_count"`
+	Health         string     `json:"health"` // online|stale|paused|empty
+	CreatedBy      uint       `json:"created_by"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
 	// UploadToken is only set on create / rotate responses.
 	UploadToken string `json:"upload_token,omitempty"`
 }

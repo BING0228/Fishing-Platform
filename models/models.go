@@ -4,8 +4,8 @@ import (
 	"strings"
 	"time"
 
-	"fishing-platform-backend/utils"
 	"gorm.io/gorm"
+	"spearhook/utils"
 )
 
 type RobotType string
@@ -205,7 +205,7 @@ type Project struct {
 	SSLKeyPath         string              `json:"ssl_key_path" gorm:"size:500"`
 	DockerImage        string              `json:"docker_image" gorm:"size:200"`
 	ContainerID        string              `json:"container_id" gorm:"size:255"`
-	Port               uint                `json:"port" gorm:"default:6000"`
+	Port               uint                `json:"port" gorm:"default:8080"`
 	LoginURL           string              `json:"login_url" gorm:"size:500"`
 	BuildStatus        BuildStatus         `json:"build_status" gorm:"size:20;default:'pending'"`
 	TaskID             string              `json:"task_id" gorm:"size:255"`
@@ -382,14 +382,14 @@ type PhishingPage struct {
 
 // MailTrackingSetting is the singleton platform-managed mail tracking config (id=1).
 type MailTrackingSetting struct {
-	ID                  uint      `json:"id" gorm:"primaryKey"`
-	PublicBaseURL       string    `json:"public_base_url" gorm:"size:500"`
-	Enabled             bool      `json:"enabled" gorm:"default:true"`
-	Secret              string    `json:"-" gorm:"size:500"` // encrypted at rest
-	AllowRedirectHosts  string    `json:"allow_redirect_hosts" gorm:"type:text"` // one host per line
-	ClickPath           string    `json:"click_path" gorm:"size:200"`
-	OpenPath            string    `json:"open_path" gorm:"size:200"`
-	UpdatedAt           time.Time `json:"updated_at"`
+	ID                 uint      `json:"id" gorm:"primaryKey"`
+	PublicBaseURL      string    `json:"public_base_url" gorm:"size:500"`
+	Enabled            bool      `json:"enabled" gorm:"default:true"`
+	Secret             string    `json:"-" gorm:"size:500"`                     // encrypted at rest
+	AllowRedirectHosts string    `json:"allow_redirect_hosts" gorm:"type:text"` // one host per line
+	ClickPath          string    `json:"click_path" gorm:"size:200"`
+	OpenPath           string    `json:"open_path" gorm:"size:200"`
+	UpdatedAt          time.Time `json:"updated_at"`
 }
 
 // HostMetricSample stores periodic platform-host resource snapshots for dashboard trends.
@@ -646,18 +646,54 @@ func NormalizeRole(role UserRole) UserRole {
 	return UserRoleAdmin
 }
 
-// AIProfile stores an OpenAI-compatible model endpoint used by page mirroring.
-// At most one profile should be Enabled at a time.
+// AIProfile stores a model endpoint used by the assistant, page mirroring,
+// and info gathering. APIFormat selects the wire format (OpenAI-compatible or
+// Anthropic Messages). At most one profile should be Enabled at a time.
 type AIProfile struct {
-	ID         string    `json:"id" gorm:"primaryKey;size:64"`
-	Name       string    `json:"name" gorm:"size:100;not null"`
-	Enabled    bool      `json:"enabled" gorm:"index"`
-	BaseURL    string    `json:"base_url" gorm:"size:500;not null"`
-	APIKey     string    `json:"-" gorm:"size:500"` // Encrypted at rest; never return raw in list APIs
-	Model      string    `json:"model" gorm:"size:100;not null"`
-	TimeoutSec int       `json:"timeout_sec" gorm:"not null;default:120"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	ID         string `json:"id" gorm:"primaryKey;size:64"`
+	Name       string `json:"name" gorm:"size:100;not null"`
+	Enabled    bool   `json:"enabled" gorm:"index"`
+	APIFormat  string `json:"api_format" gorm:"size:32;not null;default:'openai'"`
+	BaseURL    string `json:"base_url" gorm:"size:500;not null"`
+	APIKey     string `json:"-" gorm:"size:500"` // Encrypted at rest; never return raw in list APIs
+	Model      string `json:"model" gorm:"size:100;not null"`
+	TimeoutSec int    `json:"timeout_sec" gorm:"not null;default:120"`
+	// Cumulative token usage reported by the provider for this profile.
+	PromptTokens     int64      `json:"prompt_tokens" gorm:"not null;default:0"`
+	CompletionTokens int64      `json:"completion_tokens" gorm:"not null;default:0"`
+	TotalTokens      int64      `json:"total_tokens" gorm:"not null;default:0"`
+	RequestCount     int64      `json:"request_count" gorm:"not null;default:0"`
+	LastUsedAt       *time.Time `json:"last_used_at"`
+	CreatedAt        time.Time  `json:"created_at"`
+	UpdatedAt        time.Time  `json:"updated_at"`
+}
+
+// SearchSetting is the legacy singleton web-search config. New installs and
+// the settings UI use SearchProfile; this row is read once to seed the first
+// profile so existing deployments keep their provider and key.
+type SearchSetting struct {
+	ID        uint      `json:"id" gorm:"primaryKey"`
+	Provider  string    `json:"provider" gorm:"size:32;not null;default:'auto'"`
+	BaseURL   string    `json:"base_url" gorm:"size:500"`
+	APIKey    string    `json:"-" gorm:"size:500"` // Encrypted at rest
+	Count     int       `json:"count" gorm:"not null;default:10"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// SearchProfile is one configurable web-search API. Unlike AIProfile, any
+// number of profiles may be enabled; enabled standalone providers are queried
+// in parallel and their hits are merged. Provider "auto" delegates to the
+// enabled AI profile's native web_search and acts as a fallback.
+type SearchProfile struct {
+	ID        string    `json:"id" gorm:"primaryKey;size:64"`
+	Name      string    `json:"name" gorm:"size:100;not null"`
+	Enabled   bool      `json:"enabled" gorm:"index"`
+	Provider  string    `json:"provider" gorm:"size:32;not null;default:'auto'"`
+	BaseURL   string    `json:"base_url" gorm:"size:500"`
+	APIKey    string    `json:"-" gorm:"size:500"` // Encrypted at rest
+	Count     int       `json:"count" gorm:"not null;default:10"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 type InfoGatherJobStatus string
@@ -675,6 +711,7 @@ type InfoGatherJob struct {
 	ID              uint                `json:"id" gorm:"primaryKey"`
 	Target          string              `json:"target" gorm:"size:500;not null"`
 	Notes           string              `json:"notes" gorm:"type:text"`
+	ChatSessionID   uint                `json:"chat_session_id,omitempty" gorm:"index"`
 	IncludeXSearch  bool                `json:"include_x_search" gorm:"default:false"`
 	Status          InfoGatherJobStatus `json:"status" gorm:"size:20;default:'pending';index"`
 	ErrorMessage    string              `json:"error_message" gorm:"type:text"`
@@ -696,14 +733,14 @@ type InfoGatherJob struct {
 
 // InfoGatherFinding is one structured contact/OSINT row from a job.
 type InfoGatherFinding struct {
-	ID         uint      `json:"id" gorm:"primaryKey"`
-	JobID      uint      `json:"job_id" gorm:"index;not null;uniqueIndex:idx_info_gather_finding_dedupe"`
-	Kind       string    `json:"kind" gorm:"size:20;not null;uniqueIndex:idx_info_gather_finding_dedupe"`
-	Value      string    `json:"value" gorm:"size:500;not null;uniqueIndex:idx_info_gather_finding_dedupe"`
-	Label      string    `json:"label" gorm:"size:255"`
-	SourceURL  string    `json:"source_url" gorm:"size:1000"`
-	Snippet    string    `json:"snippet" gorm:"type:text"`
-	CreatedAt  time.Time `json:"created_at"`
+	ID        uint      `json:"id" gorm:"primaryKey"`
+	JobID     uint      `json:"job_id" gorm:"index;not null;uniqueIndex:idx_info_gather_finding_dedupe"`
+	Kind      string    `json:"kind" gorm:"size:20;not null;uniqueIndex:idx_info_gather_finding_dedupe"`
+	Value     string    `json:"value" gorm:"size:500;not null;uniqueIndex:idx_info_gather_finding_dedupe"`
+	Label     string    `json:"label" gorm:"size:255"`
+	SourceURL string    `json:"source_url" gorm:"size:1000"`
+	Snippet   string    `json:"snippet" gorm:"type:text"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 // QrRelay is a live QR-code relay channel: local capture uploads frames;
@@ -737,6 +774,40 @@ type QrRelayFrame struct {
 	Payload     string    `json:"payload" gorm:"type:text"`
 	PayloadHash string    `json:"payload_hash" gorm:"size:64;index"`
 	CreatedAt   time.Time `json:"created_at" gorm:"index"`
+}
+
+// ChatSession is one console conversation owned by a user.
+type ChatSession struct {
+	ID        uint   `json:"id" gorm:"primaryKey"`
+	Title     string `json:"title" gorm:"size:200;not null;default:''"`
+	CreatedBy uint   `json:"created_by" gorm:"index;not null"`
+	// Pending write-tool confirmation (empty when idle).
+	PendingToolCallID string `json:"pending_tool_call_id,omitempty" gorm:"size:100"`
+	PendingToolName   string `json:"pending_tool_name,omitempty" gorm:"size:100"`
+	PendingToolArgs   string `json:"pending_tool_args,omitempty" gorm:"type:text"`
+	// Summary caches an LLM-generated recap of older turns for context compression.
+	Summary              string    `json:"summary,omitempty" gorm:"type:text"`
+	SummaryUpToMessageID uint      `json:"summary_up_to_message_id,omitempty"`
+	CreatedAt            time.Time `json:"created_at"`
+	UpdatedAt            time.Time `json:"updated_at"`
+}
+
+// ChatMessage is one turn (user / assistant / tool) inside a session.
+type ChatMessage struct {
+	ID        uint   `json:"id" gorm:"primaryKey"`
+	SessionID uint   `json:"session_id" gorm:"index;not null"`
+	Role      string `json:"role" gorm:"size:20;not null"` // user | assistant | tool | system
+	Content   string `json:"content" gorm:"type:text"`
+	// ToolCallsJSON stores assistant tool_calls when role=assistant.
+	ToolCallsJSON string `json:"tool_calls_json,omitempty" gorm:"type:text"`
+	// ToolCallID / ToolName used when role=tool.
+	ToolCallID string `json:"tool_call_id,omitempty" gorm:"size:100;index"`
+	ToolName   string `json:"tool_name,omitempty" gorm:"size:100"`
+	// ReasoningContent preserves provider thinking (DeepSeek etc.) for replay.
+	ReasoningContent string `json:"reasoning_content,omitempty" gorm:"type:text"`
+	// Status: empty | streaming | awaiting_confirm | error | done
+	Status    string    `json:"status" gorm:"size:40;default:''"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 // AuditLog records immutable operator actions for compliance review.
@@ -800,12 +871,16 @@ func AutoMigrate(db *gorm.DB) error {
 		&MailTemplate{},
 		&AuditLog{},
 		&AIProfile{},
+		&SearchSetting{},
+		&SearchProfile{},
 		&HostMetricSample{},
 		&MailTrackingSetting{},
 		&InfoGatherJob{},
 		&InfoGatherFinding{},
 		&QrRelay{},
 		&QrRelayFrame{},
+		&ChatSession{},
+		&ChatMessage{},
 	)
 
 	if err != nil {

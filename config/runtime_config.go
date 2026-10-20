@@ -54,6 +54,21 @@ type RuntimeFileConfig struct {
 		ClickPath string `yaml:"click_path"`
 		OpenPath  string `yaml:"open_path"`
 	} `yaml:"mail_tracking"`
+	// Chat tunes the LLM orchestrator. Zero values fall back to safe defaults.
+	Chat struct {
+		MaxToolRounds      int `yaml:"max_tool_rounds"`
+		RateMinIntervalMS  int `yaml:"rate_min_interval_ms"`
+		DailyLimit         int `yaml:"daily_limit"`
+		MaxHistoryMessages int `yaml:"max_history_messages"`
+	} `yaml:"chat"`
+	// Search seeds the web-search provider config on first boot. Runtime edits
+	// live in the DB (System → Search Settings).
+	Search struct {
+		Provider string `yaml:"provider"`
+		BaseURL  string `yaml:"base_url"`
+		APIKey   string `yaml:"api_key"`
+		Count    int    `yaml:"count"`
+	} `yaml:"search"`
 }
 
 type InsecureSecuritySetting struct {
@@ -210,6 +225,62 @@ func ContainerSSLKeyPath() string {
 
 func PublicBaseURL() string {
 	return strings.TrimRight(strings.TrimSpace(runtimeConfig.PublicBaseURL), "/")
+}
+
+// ChatMaxToolRounds caps LLM ↔ tool loops per user turn.
+func ChatMaxToolRounds() int {
+	if v := runtimeConfig.Chat.MaxToolRounds; v > 0 {
+		return v
+	}
+	return 8
+}
+
+// ChatRateMinIntervalMS is the minimum gap between a user's chat messages.
+func ChatRateMinIntervalMS() int {
+	if v := runtimeConfig.Chat.RateMinIntervalMS; v > 0 {
+		return v
+	}
+	return 800
+}
+
+// ChatDailyLimit caps per-user chat requests per day.
+func ChatDailyLimit() int {
+	if v := runtimeConfig.Chat.DailyLimit; v > 0 {
+		return v
+	}
+	return 200
+}
+
+// ChatMaxHistoryMessages is the context-compression threshold. When a session
+// grows past it, older turns are summarized into one system message.
+func ChatMaxHistoryMessages() int {
+	if v := runtimeConfig.Chat.MaxHistoryMessages; v > 0 {
+		return v
+	}
+	return 40
+}
+
+// SearchProvider is the boot-time default web-search provider.
+func SearchProvider() string {
+	return strings.ToLower(strings.TrimSpace(runtimeConfig.Search.Provider))
+}
+
+// SearchBaseURL is the boot-time default provider base URL.
+func SearchBaseURL() string {
+	return strings.TrimRight(strings.TrimSpace(runtimeConfig.Search.BaseURL), "/")
+}
+
+// SearchAPIKey is the boot-time default provider API key.
+func SearchAPIKey() string {
+	return strings.TrimSpace(runtimeConfig.Search.APIKey)
+}
+
+// SearchCount is the default number of results per query.
+func SearchCount() int {
+	if v := runtimeConfig.Search.Count; v > 0 {
+		return v
+	}
+	return 10
 }
 
 func MailTrackingEnabled() bool {

@@ -8,8 +8,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"fishing-platform-backend/config"
-	"fishing-platform-backend/models"
+	"spearhook/config"
+	"spearhook/models"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -132,7 +132,7 @@ func writePasswordFile(dbPath string, password string) (string, error) {
 	}
 
 	passwordFile := filepath.Join(dataDir, "admin_password.txt")
-	content := fmt.Sprintf("Fishing Platform Admin Credentials\n================================\nUsername: admin\nPassword: %s\n\nIMPORTANT: Please save this password and delete this file after logging in.\n", password)
+	content := fmt.Sprintf("Spearhook Admin Credentials\n================================\nUsername: admin\nPassword: %s\n\nIMPORTANT: Please save this password and delete this file after logging in.\n", password)
 	if err := os.WriteFile(passwordFile, []byte(content), 0600); err != nil {
 		return "", err
 	}

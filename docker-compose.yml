@@ -1,0 +1,19 @@
+services:
+  spearhook:
+    image: ${SPEARHOOK_IMAGE:-spearhook:latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ${SPEARHOOK_CONTAINER:-spearhook}
+    restart: unless-stopped
+    # Host network lets locally-run Flask projects bind host ports directly.
+    network_mode: host
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - ./data:/app/data
+      # Optional: enables Docker-mode projects via the host daemon.
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      CHROME_PATH: /usr/bin/chromium
+      DOCKER_HOST: unix:///var/run/docker.sock
+      TZ: ${TZ:-Asia/Shanghai}

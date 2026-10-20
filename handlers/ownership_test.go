@@ -7,13 +7,13 @@ import (
 	"path/filepath"
 	"testing"
 
-	"fishing-platform-backend/config"
-	"fishing-platform-backend/middleware"
-	"fishing-platform-backend/models"
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
+	"spearhook/config"
+	"spearhook/middleware"
+	"spearhook/models"
 )
 
 func TestOperatorOnlySeesOwnProjects(t *testing.T) {
