@@ -45,7 +45,7 @@ Spearhook は、**許可された**セキュリティテスト、レッドチー
 
 Gophish をご存じの場合: 同ツールはキャンペーンとテンプレート管理に重点を置いています。Spearhook は演習全体を支援する運用コンソールであり、AI ミラーを備えたページライブラリ、AI アシスタントによる運用、マルチエージェント展開、ライブ QR リレー、AI OSINT 収集、Webhook、IP ブラックリスト、監査、ロール管理を統合しています。
 
-Go バイナリ 1 つに UI（`frontend/dist`）を埋め込み、API とコンソールを同じポートで提供します。スタック: Go 1.24 / Gin / GORM+SQLite / Next.js 静的エクスポート / 任意の Docker SDK。本番フロントエンドとモックデータで構成した読み取り専用デモ：[デモ](https://p1temax.github.io/Spearhook/)。
+Go バイナリ 1 つに UI（`frontend/dist`）を埋め込み、API とコンソールを同じポートで提供します。スタック: Go 1.24 / Gin / GORM+SQLite / Next.js 静的エクスポート / 任意の Docker SDK。本番フロントエンドとモックデータで構成した読み取り専用デモ：[デモ](https://p1temax.github.io/Spearhook/)。デモログイン: `demo` / `demo`（任意の認証情報でログインできます）。
 
 
 ---

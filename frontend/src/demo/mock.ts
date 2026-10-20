@@ -682,6 +682,9 @@ export const demoAdapter: AxiosAdapter = async (config) => {
     return response(config, new Blob(["demo"], { type: "application/zip" }));
   }
   if (!isGet(config)) {
+    if (pathOf(config) === "/api/auth/login/") {
+      return response(config, { access: DEMO_TOKEN, user: DEMO_USER });
+    }
     if (pathOf(config) === "/api/auth/logout/") return response(config, { ok: true });
     if (pathOf(config) === "/api/chat/sessions/") return response(config, { id: 1 });
     if (pathOf(config) === "/api/ai-settings/test/" || pathOf(config) === "/api/search-settings/test/") {

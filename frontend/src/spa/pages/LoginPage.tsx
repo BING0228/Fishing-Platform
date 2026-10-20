@@ -2,22 +2,23 @@
 
 import { FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { RiTranslate2 } from "@remixicon/react";
 import { api } from "@/api";
 import { useAuthStore } from "@/auth/auth-store";
 import { useI18n } from "@/i18n";
+import { DEMO_MODE } from "@/demo/config";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BrandLogo } from "@/components/brand-logo";
+import { LanguageSwitcher } from "@/components/language-switcher";
 
 export default function LoginPage() {
-  const { t, locale, setLocale } = useI18n();
+  const { t } = useI18n();
   const setAuth = useAuthStore((s) => s.setAuth);
   const navigate = useNavigate();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [username, setUsername] = useState(DEMO_MODE ? "demo" : "");
+  const [password, setPassword] = useState(DEMO_MODE ? "demo" : "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -49,17 +50,11 @@ export default function LoginPage() {
 
   return (
     <div className="relative flex min-h-svh flex-col items-center justify-center bg-muted p-4 sm:p-6 md:p-8 lg:p-10">
-      <Button
-        variant="ghost"
-        size="icon"
+      <LanguageSwitcher
+        compact
+        align="end"
         className="absolute right-3 top-3 sm:right-4 sm:top-4"
-        onClick={() => setLocale(locale === "zh" ? "en" : "zh")}
-        aria-label={t(
-          locale === "zh" ? "locale.switchToEnglish" : "locale.switchToChinese",
-        )}
-      >
-        <RiTranslate2 className="h-4 w-4" />
-      </Button>
+      />
 
       <div className="flex w-full max-w-sm flex-col gap-4 md:max-w-[min(90vw,48rem)]">
         <Card className="overflow-hidden p-0 shadow-md">
@@ -69,10 +64,12 @@ export default function LoginPage() {
               onSubmit={onSubmit}
             >
               <div className="mx-auto flex w-full max-w-sm flex-col gap-4 sm:gap-5">
-                <div className="flex flex-col items-center gap-2 text-center">
-                  <h1 className="flex items-center gap-2 text-xl font-bold sm:text-2xl">
-                    <BrandLogo size={32} title={t("app.title")} />
-                    <span>{t("app.title")}</span>
+                <div className="flex flex-col items-center gap-4 text-center sm:gap-5">
+                  <h1 className="flex items-center gap-2.5 text-xl font-semibold sm:text-2xl">
+                    <BrandLogo size={44} colored title={t("app.title")} />
+                    <span className="font-brand tracking-[0.14em] text-slate-900">
+                      {t("app.title")}
+                    </span>
                   </h1>
                   <p className="text-balance text-xs text-muted-foreground sm:text-sm">
                     {t("app.motto")}
@@ -115,6 +112,11 @@ export default function LoginPage() {
                   <Button type="submit" className="h-9 w-full" disabled={loading}>
                     {loading ? "…" : t("login.submit")}
                   </Button>
+                  {DEMO_MODE ? (
+                    <p className="text-center text-xs text-muted-foreground">
+                      {t("login.demoHint")}
+                    </p>
+                  ) : null}
                 </div>
               </div>
             </form>

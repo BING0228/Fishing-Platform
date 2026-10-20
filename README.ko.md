@@ -45,7 +45,7 @@ Spearhook은 **승인된** 보안 테스트, 레드팀 훈련, 피싱 인식 제
 
 Gophish를 알고 있다면: 해당 툴킷은 캠페인과 템플릿 관리에 중점을 둡니다. Spearhook은 훈련 전반을 지원하는 운영 콘솔로, AI 미러가 있는 페이지 라이브러리, AI 어시스턴트 기반 운영, 멀티 에이전트 배포, 라이브 QR 릴레이, AI OSINT 수집, Webhook, IP 블랙리스트, 감사, 역할 관리를 통합합니다.
 
-Go 바이너리 하나에 UI(`frontend/dist`)를 내장하고 같은 포트에서 API와 콘솔을 제공합니다. 스택: Go 1.24 / Gin / GORM+SQLite / Next.js 정적 내보내기 / 선택적 Docker SDK. 프로덕션 프론트엔드와 목 데이터로 구성한 읽기 전용 데모: [데모](https://p1temax.github.io/Spearhook/). 
+Go 바이너리 하나에 UI(`frontend/dist`)를 내장하고 같은 포트에서 API와 콘솔을 제공합니다. 스택: Go 1.24 / Gin / GORM+SQLite / Next.js 정적 내보내기 / 선택적 Docker SDK. 프로덕션 프론트엔드와 목 데이터로 구성한 읽기 전용 데모: [데모](https://p1temax.github.io/Spearhook/). 데모 로그인: `demo` / `demo` (임의의 자격 증명으로 로그인할 수 있습니다). 
 
 
 ---

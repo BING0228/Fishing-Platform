@@ -49,7 +49,7 @@ Do not use Spearhook without written authorization or other clearly verifiable a
 
 For readers familiar with [Gophish](https://github.com/gophish/gophish): that toolkit focuses on campaigns and templates, whereas Spearhook is an end-to-end operations console for the engagement. It combines an AI-assisted page library, an AI operations assistant, multi-agent deployment, live QR relays, AI-powered OSINT collection, webhooks, IP blacklisting, audit logging, and role management.
 
-One Go binary embeds the UI (`frontend/dist`) and serves API + console on the same port. Stack: Go 1.24 / Gin / GORM+SQLite / Next.js static export / optional Docker SDK. A read-only demo built from the production frontend with mock data is available at the [Live demo](https://p1temax.github.io/Spearhook/).
+One Go binary embeds the UI (`frontend/dist`) and serves API + console on the same port. Stack: Go 1.24 / Gin / GORM+SQLite / Next.js static export / optional Docker SDK. A read-only demo built from the production frontend with mock data is available at the [Live demo](https://p1temax.github.io/Spearhook/). Demo login: `demo` / `demo` (any credentials are accepted).
 
 ---
 
