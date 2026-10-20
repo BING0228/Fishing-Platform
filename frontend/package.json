@@ -8,7 +8,8 @@
     "start": "next start -p 8081",
     "lint": "next lint",
     "test:helpers": "node --import tsx --test src/utils/projectDetailHelpers.test.ts src/utils/chatLayout.test.ts src/i18n/locales.test.ts src/i18n/messages.test.ts",
-    "build:demo": "NEXT_OUTPUT_EXPORT=1 NEXT_PUBLIC_DEMO_MODE=1 NEXT_PUBLIC_BASE_PATH=/Spearhook next build --webpack && rm -rf demo-dist && mv out demo-dist && cp demo-dist/index.html demo-dist/404.html && touch demo-dist/.nojekyll"
+    "build:demo": "NEXT_OUTPUT_EXPORT=1 NEXT_PUBLIC_DEMO_MODE=1 NEXT_PUBLIC_BASE_PATH=/Spearhook next build --webpack && rm -rf demo-dist && mv out demo-dist && cp demo-dist/index.html demo-dist/404.html && touch demo-dist/.nojekyll",
+    "build:demo:root": "NEXT_OUTPUT_EXPORT=1 NEXT_PUBLIC_DEMO_MODE=1 next build --webpack && rm -rf demo-dist && mv out demo-dist && cp demo-dist/index.html demo-dist/404.html"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.23",
