@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Spearhook — Static Operations Demo</title>
+  <link rel="icon" href="logo-dark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <svg class="sprite" aria-hidden="true">
+    <symbol id="i-dashboard" viewBox="0 0 24 24"><path d="M4 13h6V4H4v9Zm0 7h6v-5H4v5Zm10 0h6v-9h-6v9Zm0-16v5h6V4h-6Z"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><path d="M5 4h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9l-4 3v-3H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm3 5v2h8V9H8Zm0 4v2h5v-2H8Z"/></symbol>
+    <symbol id="i-projects" viewBox="0 0 24 24"><path d="M4 5h7v6H4V5Zm9 0h7v6h-7V5ZM4 13h7v6H4v-6Zm9 0h7v6h-7v-6Z"/></symbol>
+    <symbol id="i-audit" viewBox="0 0 24 24"><path d="M6 3h9l3 3v15H6V3Zm2 5v2h8V8H8Zm0 4v2h8v-2H8Zm0 4v2h5v-2H8Z"/></symbol>
+    <symbol id="i-mail" viewBox="0 0 24 24"><path d="M3 5h18v14H3V5Zm2 2v.6l7 4.4 7-4.4V7H5Zm14 10V9.6l-7 4.4-7-4.4V17h14Z"/></symbol>
+    <symbol id="i-pages" viewBox="0 0 24 24"><path d="M4 4h16v16H4V4Zm2 2v12h12V6H6Zm2 2h8v2H8V8Zm0 4h8v2H8v-2Zm0 4h5v2H8v-2Z"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><path d="M10.5 4a6.5 6.5 0 1 0 4.1 11.5l4.2 4.2 1.4-1.4-4.2-4.2A6.5 6.5 0 0 0 10.5 4Zm0 2a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Z"/></symbol>
+    <symbol id="i-qr" viewBox="0 0 24 24"><path d="M3 3h8v8H3V3Zm2 2v4h4V5H5Zm8-2h8v8h-8V3Zm2 2v4h4V5h-4ZM3 13h8v8H3v-8Zm2 2v4h4v-4H5Zm8-2h3v3h-3v-3Zm5 0h3v3h-3v-3Zm-5 5h3v3h-3v-3Zm5 0h3v3h-3v-3Z"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5.2-3.4 8.6-8 10-4.6-1.4-8-4.8-8-10V6l8-3Zm0 2.2L6 7.4V11c0 3.9 2.4 6.6 6 7.8 3.6-1.2 6-3.9 6-7.8V7.4l-6-2.2Z"/></symbol>
+  </svg>
+
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <img src="logo-dark.svg" alt="" width="34" height="34">
+        <div><strong>SPEARHOOK</strong><span>OPS CONSOLE</span></div>
+      </div>
+
+      <div class="nav-group">
+        <span class="nav-label">PLATFORM</span>
+        <span class="nav-item active"><svg><use href="#i-dashboard"/></svg>Dashboard</span>
+        <span class="nav-item"><svg><use href="#i-chat"/></svg>AI Assistant</span>
+        <span class="nav-item"><svg><use href="#i-projects"/></svg>Projects</span>
+        <span class="nav-item"><svg><use href="#i-audit"/></svg>Audit Logs</span>
+      </div>
+
+      <div class="nav-group">
+        <span class="nav-label">WORKBENCH</span>
+        <span class="nav-item"><svg><use href="#i-mail"/></svg>Send Email</span>
+        <span class="nav-item"><svg><use href="#i-pages"/></svg>Page Builder</span>
+        <span class="nav-item"><svg><use href="#i-search"/></svg>Info Gathering</span>
+        <span class="nav-item"><svg><use href="#i-qr"/></svg>QR Phishing</span>
+      </div>
+
+      <div class="nav-group">
+        <span class="nav-label">SYSTEM</span>
+        <span class="nav-item"><svg><use href="#i-shield"/></svg>Access Control</span>
+        <span class="nav-item"><svg><use href="#i-projects"/></svg>Integrations</span>
+        <span class="nav-item"><svg><use href="#i-mail"/></svg>Email</span>
+        <span class="nav-item"><svg><use href="#i-chat"/></svg>LLM</span>
+      </div>
+
+      <div class="sidebar-user">
+        <span class="avatar">AD</span>
+        <div><strong>admin</strong><span>Administrator</span></div>
+      </div>
+    </aside>
+
+    <div class="workspace">
+      <header class="topbar">
+        <div class="crumbs"><span>PLATFORM</span><b>/</b><strong>Dashboard</strong></div>
+        <div class="top-actions">
+          <span class="status-pill"><i></i>Platform online</span>
+          <span class="lang-pill">EN</span>
+          <span class="avatar small">AD</span>
+        </div>
+      </header>
+
+      <main>
+        <section class="intro">
+          <div>
+            <span class="eyebrow">AUTHORIZED OPERATIONS</span>
+            <h1>Operations overview</h1>
+            <p>A consolidated view of projects, captured credentials, agents, and live campaign activity.</p>
+          </div>
+          <div class="demo-note"><span>STATIC DEMO</span><small>Mock data · no backend · no interactions</small></div>
+        </section>
+
+        <section class="kpis">
+          <article class="card kpi">
+            <div class="kpi-top"><span>Active projects</span><span class="chip blue">3 total</span></div>
+            <strong>3</strong>
+            <div class="kpi-foot"><span class="up">↑ 2 this week</span><span>2 running · 1 building</span></div>
+            <div class="spark"><i style="height:34%"></i><i style="height:48%"></i><i style="height:44%"></i><i style="height:64%"></i><i style="height:58%"></i><i style="height:82%"></i><i style="height:76%"></i></div>
+          </article>
+          <article class="card kpi">
+            <div class="kpi-top"><span>Captured credentials</span><span class="chip green">Today +8</span></div>
+            <strong>27</strong>
+            <div class="kpi-foot"><span class="up">↑ 12.5%</span><span>vs. previous 24h</span></div>
+            <div class="spark green"><i style="height:28%"></i><i style="height:36%"></i><i style="height:52%"></i><i style="height:45%"></i><i style="height:68%"></i><i style="height:72%"></i><i style="height:88%"></i></div>
+          </article>
+          <article class="card kpi">
+            <div class="kpi-top"><span>Online agents</span><span class="chip amber">2 / 3</span></div>
+            <strong>2<span class="muted-value">/3</span></strong>
+            <div class="kpi-foot"><span class="up">↑ 1 reconnected</span><span>last heartbeat 22s ago</span></div>
+            <div class="spark amber"><i style="height:22%"></i><i style="height:42%"></i><i style="height:38%"></i><i style="height:56%"></i><i style="height:48%"></i><i style="height:62%"></i><i style="height:58%"></i></div>
+          </article>
+          <article class="card kpi">
+            <div class="kpi-top"><span>Mail campaigns</span><span class="chip slate">4 total</span></div>
+            <strong>4</strong>
+            <div class="kpi-foot"><span class="up">↑ 1 scheduled</span><span>2 active · 1 draft</span></div>
+            <div class="spark slate"><i style="height:44%"></i><i style="height:34%"></i><i style="height:58%"></i><i style="height:50%"></i><i style="height:66%"></i><i style="height:60%"></i><i style="height:74%"></i></div>
+          </article>
+        </section>
+
+        <section class="split">
+          <article class="card chart-card">
+            <div class="card-head">
+              <div><h2>Performance trend</h2><p>Credential submissions and mail activity over the last 24 hours.</p></div>
+              <div class="legend"><span><i class="dot blue"></i>Credentials</span><span><i class="dot slate"></i>Mail events</span></div>
+            </div>
+            <div class="chart-wrap">
+              <div class="y-labels"><span>40</span><span>30</span><span>20</span><span>10</span><span>0</span></div>
+              <svg viewBox="0 0 760 230" preserveAspectRatio="none" aria-label="Performance trend mock chart">
+                <defs>
+                  <linearGradient id="area" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" stop-color="#2563eb" stop-opacity=".22"/>
+                    <stop offset="1" stop-color="#2563eb" stop-opacity="0"/>
+                  </linearGradient>
+                </defs>
+                <g class="grid-lines">
+                  <line x1="0" y1="20" x2="760" y2="20"/><line x1="0" y1="67" x2="760" y2="67"/>
+                  <line x1="0" y1="114" x2="760" y2="114"/><line x1="0" y1="161" x2="760" y2="161"/>
+                  <line x1="0" y1="208" x2="760" y2="208"/>
+                </g>
+                <path d="M0 196 C40 190 52 166 92 170 S150 150 188 158 S240 122 286 132 S338 108 382 118 S438 92 480 98 S540 70 580 80 S640 58 680 64 S730 42 760 48 L760 208 L0 208 Z" fill="url(#area)"/>
+                <path d="M0 196 C40 190 52 166 92 170 S150 150 188 158 S240 122 286 132 S338 108 382 118 S438 92 480 98 S540 70 580 80 S640 58 680 64 S730 42 760 48" class="line-blue"/>
+                <path d="M0 207 C45 204 60 198 100 200 S160 188 200 192 S260 180 300 184 S360 172 400 178 S460 160 500 166 S560 154 600 157 S660 146 700 150 S740 140 760 144" class="line-slate"/>
+                <circle cx="580" cy="80" r="5" class="point"/>
+              </svg>
+              <div class="x-labels"><span>00:00</span><span>04:00</span><span>08:00</span><span>12:00</span><span>16:00</span><span>20:00</span><span>24:00</span></div>
+            </div>
+          </article>
+
+          <article class="card agents-card">
+            <div class="card-head"><div><h2>Agent status</h2><p>Edge runtimes reporting to the control plane.</p></div><span class="chip green">2 online</span></div>
+            <div class="agent-list">
+              <div class="agent"><span class="agent-icon">SGP</span><div><strong>edge-sgp-01</strong><span>154.36.174.224 · v1.8.2</span></div><span class="status online">Online</span></div>
+              <div class="agent"><span class="agent-icon">FRA</span><div><strong>edge-fra-02</strong><span>203.0.113.42 · v1.8.2</span></div><span class="status online">Online</span></div>
+              <div class="agent"><span class="agent-icon muted">LAB</span><div><strong>lab-03</strong><span>198.51.100.18 · v1.7.9</span></div><span class="status offline">Offline</span></div>
+            </div>
+            <div class="health">
+              <div class="donut"><div><strong>66%</strong><span>online</span></div></div>
+              <div class="health-copy"><strong>Deployment health</strong><p>4 project bindings synchronized across the fleet.</p><span class="chip green">No failed deployments</span></div>
+            </div>
+          </article>
+        </section>
+
+        <section class="split lower">
+          <article class="card table-card">
+            <div class="card-head"><div><h2>Recent credentials</h2><p>Latest submissions from active landing pages.</p></div><span class="chip slate">Last 30 min</span></div>
+            <table>
+              <thead><tr><th>Time</th><th>Project</th><th>Identity</th><th>Source IP</th><th>Status</th></tr></thead>
+              <tbody>
+                <tr><td>12:41:08</td><td><b>finance-login</b></td><td>f.ops@example.com</td><td>203.0.113.24</td><td><span class="status online">New</span></td></tr>
+                <tr><td>12:38:52</td><td><b>helpdesk-portal</b></td><td>m.chen@example.com</td><td>198.51.100.17</td><td><span class="status online">New</span></td></tr>
+                <tr><td>12:31:19</td><td><b>finance-login</b></td><td>a.singh@example.com</td><td>203.0.113.88</td><td><span class="status neutral">Reviewed</span></td></tr>
+                <tr><td>12:26:44</td><td><b>q4-awareness</b></td><td>j.martin@example.com</td><td>198.51.100.63</td><td><span class="status neutral">Reviewed</span></td></tr>
+              </tbody>
+            </table>
+          </article>
+
+          <article class="card chat-card">
+            <div class="card-head"><div><h2>AI Assistant</h2><p>Whitelisted platform tools, with confirmation for writes.</p></div><span class="chip blue">Preview</span></div>
+            <div class="chat">
+              <div class="msg user"><span>You</span><p>Clone <code>https://example.com/login</code> into the page library and deploy it to an online agent.</p></div>
+              <div class="msg assistant"><span>Assistant</span><p>I’ll resolve an online agent, mirror the page, then prepare the project.</p></div>
+              <div class="tool"><span class="tool-icon">01</span><div><strong>list_agents</strong><small>3 agents found · edge-sgp-01 selected</small></div><span class="ok">done</span></div>
+              <div class="tool"><span class="tool-icon">02</span><div><strong>clone_page</strong><small>Page #42 “example-login” created · AI rewrite complete</small></div><span class="ok">done</span></div>
+              <div class="tool"><span class="tool-icon">03</span><div><strong>create_project</strong><small>Project “example-demo” prepared · confirmation required</small></div><span class="wait">confirm</span></div>
+              <div class="chat-note">Write actions require operator confirmation. This demo does not execute tools or modify any data.</div>
+            </div>
+          </article>
+        </section>
+
+        <section class="projects">
+          <article class="card">
+            <div class="card-head"><div><h2>Active projects</h2><p>Runtime and collection status by project.</p></div><span class="chip slate">3 projects</span></div>
+            <div class="project-grid">
+              <div class="project"><div><strong>q4-awareness</strong><span>Local Flask · QR relay</span></div><span class="status online">Running</span><div class="bar"><i style="width:78%"></i></div><small>1,284 visits · 18 credentials</small></div>
+              <div class="project"><div><strong>finance-login</strong><span>Docker · edge-sgp-01</span></div><span class="status building">Building</span><div class="bar amber"><i style="width:46%"></i></div><small>Image build · 46%</small></div>
+              <div class="project"><div><strong>helpdesk-portal</strong><span>Docker · 2 agents</span></div><span class="status online">Running</span><div class="bar"><i style="width:63%"></i></div><small>842 visits · 9 credentials</small></div>
+            </div>
+          </article>
+        </section>
+
+        <footer>
+          <span>Static demonstration · mock data only</span>
+          <span>No backend connection · no actions are available</span>
+        </footer>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

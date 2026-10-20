@@ -1,104 +1,129 @@
 <p align="right">
-  <b>English</b> · <a href="README.zh.md">中文</a>
+  <b>English</b> · <a href="README.zh.md">简体中文</a> · <a href="README.zh-TW.md">繁體中文</a> · <a href="README.ja.md">日本語</a> · <a href="README.ko.md">한국어</a>
 </p>
 
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="README.assets/logo-dark.svg" />
-    <img src="README.assets/logo.svg" alt="Fishing Platform" width="96" height="96" />
+    <img src="README.assets/logo.svg" alt="Spearhook" width="96" height="96" title="Spearhook" />
   </picture>
 </p>
 
-<h1 align="center">Fishing Platform</h1>
+<h1 align="center">Spearhook</h1>
 
 <p align="center">
-  <strong>Open-source phishing toolkit for red teams</strong>
+  <strong>Self-hosted phishing simulation console for authorized red teams</strong>
 </p>
 
 <p align="center">
-  Go + Gin · Next.js · SQLite · one binary · optional remote agents
+  Go + Gin · Next.js · SQLite · single binary · optional remote agents
 </p>
 
 <p align="center">
-  <a href="#what-it-is">What it is</a> ·
+  <a href="#legal-notice">Legal</a> ·
+  <a href="#overview">Overview</a> ·
   <a href="#features">Features</a> ·
+  <a href="https://p1temax.github.io/Spearhook/">Live demo</a> ·
   <a href="#architecture">Architecture</a> ·
   <a href="#quick-start">Quick start</a> ·
   <a href="#agents">Agents</a> ·
   <a href="#console">Console</a> ·
-  <a href="#docs">Docs</a>
+  <a href="#disclaimer">Disclaimer</a>
 </p>
 
 ---
 
-## What it is
+## Legal notice
 
-**Fishing Platform** (钓鱼台) is a self-hosted phishing toolkit. Stand up landing pages, send mail, watch opens and clicks, and get pinged when someone submits credentials. Run pages on the box or push them out to agents.
+Spearhook is intended exclusively for authorized security testing, red-team exercises, and phishing awareness training.
 
-If you know Gophish: that's campaigns and templates. This is the ops box around it — pages, agents, live QR, AI gather, webhooks, blacklist.
+Unauthorized use against systems, accounts, or individuals is unlawful. Users are solely responsible for obtaining authorization and for their operation of this software. The authors and contributors accept no liability for misuse.
 
-One Go binary embeds the UI (`frontend/dist`) and serves API + console on the same port.
-
-<p align="center">
-  <img src="README.assets/login.png" alt="Login" width="880" />
-</p>
-
-> Use it only on targets you are allowed to phish. No authorization, don't.
+Do not use Spearhook without written authorization or other clearly verifiable authorization.
 
 ---
+
+## Overview
+
+**Spearhook** is a self-hosted phishing simulation console covering landing-page hosting, email delivery, open and click tracking, credential capture, and real-time submission notifications. Pages can run on the control plane or be deployed to remote agents.
+
+For readers familiar with [Gophish](https://github.com/gophish/gophish): that toolkit focuses on campaigns and templates, whereas Spearhook is an end-to-end operations console for the engagement. It combines an AI-assisted page library, an AI operations assistant, multi-agent deployment, live QR relays, AI-powered OSINT collection, webhooks, IP blacklisting, audit logging, and role management.
+
+One Go binary embeds the UI (`frontend/dist`) and serves API + console on the same port. Stack: Go 1.24 / Gin / GORM+SQLite / Next.js static export / optional Docker SDK. A read-only static demo is available at the [Live demo](https://p1temax.github.io/Spearhook/).
+
+---
+
+## Languages
+
+English is the source language for the console and the primary documentation
+language, and it is the fallback when a translation is missing. The web console
+also ships with Simplified Chinese, Traditional Chinese, Japanese, and Korean.
+Use the language picker in the header or on the login screen; the choice is
+stored per browser. This README is maintained in all five languages; English
+remains the source of truth when they differ.
 
 ## Features
 
-- **Projects** — upload HTML (or pull a page into Page Builder). Run with Docker or local Flask. Optional TLS, agents, QR relay.
-- **Mail** — SMTP profiles, templates, scheduled send, bulk send, per-campaign open/click tracking (`/api/<slug>`). Noise in HTML if you want it.
-- **Hooks** — Feishu, WeCom, Telegram, Slack, DingTalk, Discord. Bind a webhook to the project; submit → “fish on the hook” to chat. Opens/clicks do not fire this.
-- **QR** — live QR image at `/q/{slug}.png`. A local script uploads screen frames; drop `{{QR_RELAY_URL}}` / `{{QR_RELAY_IMG}}` in the page.
-- **Info gathering** — point at your own AI endpoint (`/responses` + `web_search`). Pull public emails/phones, export CSV, hand off to mail.
-- **Agents** — extra binary on other hosts. Many projects per agent, many agents per project. Logs and submits come home.
-- **Housekeeping** — dashboard + host graphs, encrypted passwords at rest, IP geo (QQWry), CSV export, IP blacklist (spray submits → drop the IP so blue team can't flood you), JWT + optional Basic Auth, admin/operator, append-only audit log, EN/ZH UI.
+- **AI Assistant** — natural-language ops assistant (`/chat`). Token-level SSE streaming via a whitelisted tool registry (`list_agents`, `clone_page`, `create_project`, `start_info_gather`, `create_mail_draft`, `send_mail_campaign`, QR/credentials/blacklist, …). Read-only tools execute automatically, destructive actions require confirmation, and every write is recorded in the audit log. The assistant does not generate HTML directly; URL mirroring is handled by the page-library pipeline.
+- **Page library / AI mirror** — upload HTML or clone a public login/landing URL into the library via AI rewrite (OpenAI-compatible `chat/completions` or Anthropic `/messages`). Relative CSS/assets are absolutized against the source origin so previews keep styles.
+- **Projects** — bind a library page, run with **Docker** or **local Flask**, optional TLS, one or many agents, QR relay placeholders. Credential submits, logs, and deployments roll up per project.
+- **Mail** — SMTP profiles, templates, scheduled / bulk send, per-campaign open & click tracking (`/api/<slug>`). Optional HTML noise. Tracking public URL and HMAC live under System → Mail Tracking.
+- **Push channels** — Feishu, WeCom, Telegram, Slack, DingTalk, and Discord. Bind a webhook to a project to receive notifications on credential submission; opens and clicks do not trigger this path.
+- **QR phishing** — stable public image at `/q/{slug}.png`. A local capture script uploads screen frames; pages use `{{QR_RELAY_URL}}` / `{{QR_RELAY_IMG}}`.
+- **Information gathering** — An AI endpoint plus a configurable web-search provider (native `web_search`, DeepSeek Search, Brave, Tavily, Serper, or Bocha). Collect publicly available email addresses and phone numbers with sources, export them as CSV, and use them for mail delivery.
+- **Agents** — `spearhook-agent` runs on additional hosts. A single agent can host multiple projects, and a single project can be deployed to multiple agents. Agents provide heartbeats and buffer access logs in `pending-logs.json` for retransmission after recovery. Credential submissions are proxied to the control plane in real time; if the control plane is unreachable, visitors receive HTTP 502 (no submission queue is provided).
+- **Auth & roles** — JWT login; optional HTTP Basic perimeter; **admin** / **operator** with ownership scoping; append-only audit log (no product delete).
+- **Security and operations** — Dashboard and host CPU/memory monitoring, encryption of secrets and passwords at rest, QQWry geolocation, CSV export, and an **IP blacklist** for blocking abusive submission sources. The UI is available in English, Simplified Chinese, Traditional Chinese, Japanese, and Korean. AI Settings supports OpenAI-compatible and Anthropic Messages profiles for page mirroring, the AI Assistant, and information gathering.
 
-Usual path: SMTP + webhook → page → project (bind the channel) → send → wait for the hook ping → records. If someone starts spraying submits, blacklist the IP.
+**Standard workflow:** Configure SMTP and webhooks → mirror or upload a page → create a project (bind agents and push channels) → send mail → await submission notifications → review records. If submission volume is abusive, add the source IP to the blacklist.
 
 ---
 
 ## Architecture
 
 ```text
-  Browser (EN/ZH, JWT)
+  Browser (i18n UI · JWT · optional Basic Auth)
            │
            ▼
-  Control plane  (Go / Gin, SQLite, embedded UI)
+  Control plane  (Go / Gin · SQLite · embedded Next UI · Assistant SSE)
            │
-     ┌─────┴──────┐
-     ▼            ▼
-  Docker /     Remote agents
-  local Flask
-     │            │
-     └─────┬──────┘
-           ▼
-  submits · logs · mail open/click · live QR
+     ┌─────┴──────────────┐
+     ▼                    ▼
+  Docker / local Flask   Remote spearhook-agent(s)
+     │                    │
+     └─────────┬──────────┘
+               ▼
+  submits · access logs · mail open/click · live QR · webhooks
 ```
 
-Go 1.24, Gin, GORM/SQLite, Next.js static export, optional Docker SDK.
+| Piece | Role |
+|-------|------|
+| Control plane (`spearhook`) | Console, API, SQLite, mail tracking endpoints, QR public URL, AI assistant orchestrator |
+| Agent (`spearhook-agent`) | Edge landing-page runtime; initiates an **outbound** connection to the control plane |
+| Frontend | Next.js App Router → static `frontend/dist`, embedded via `go:embed` |
+| AI profile | One enabled OpenAI-compatible or Anthropic Messages endpoint for page mirror, assistant tools, and info gather |
+| Search provider | Web search for info gather: native `web_search` or DeepSeek / Brave / Tavily / Serper / Bocha |
 
 ---
 
 ## Quick start
 
-Needs Linux, macOS, or Windows.
+Linux, macOS, or Windows.
 
-- **Run a release binary:** just the binary + `config.yaml`.
-- **Build from source:** Go **1.24+**, Node.js (frontend).
-- **Docker run mode:** Docker Engine (SDK talks to it). Skip if you only use local Flask / agents.
-- **Local Flask run mode:** `python3` with Flask (`flask`, `flask_cors`, `requests`).
-- **QR capture:** Python 3 + the zip from **Workbench → QR Phishing** (or [`scripts/qr-relay`](scripts/qr-relay/README.md)). macOS wants `zbar` for decode.
-- Agents must reach the control plane over HTTP(S).
+| Need | Notes |
+|------|--------|
+| Run a release | Binary + `config.yaml` |
+| Build from source | Go **1.24+**, Node.js (frontend) |
+| Docker run mode | Docker Engine reachable; skip if you only use local Flask / agents |
+| Local Flask run mode | `python3` + `flask`, `flask_cors`, `requests` |
+| QR capture | Python 3 + zip from **Workbench → QR Phishing** (or [`scripts/qr-relay`](scripts/qr-relay/README.md)); macOS decode wants `zbar` |
+| Agents | Must reach the control plane over HTTP(S) |
 
 | What | Default |
 |------|---------|
 | Console / API | `:8000` |
 | Frontend dev | `:8081` → proxies `/api` to `:8000` |
-| Agent landing pages | `20000–30000/TCP` on the agent host |
+| Agent landing ports | `20000–30000/TCP` on the agent host |
 
 ### 1. Config
 
@@ -106,7 +131,7 @@ Needs Linux, macOS, or Windows.
 cp config.yaml.example config.yaml
 ```
 
-Swap the placeholders before you actually use it:
+Replace placeholders before a real engagement:
 
 ```yaml
 server:
@@ -128,18 +153,18 @@ container:
   ssl_key_path: /app/certificates/key.pem
 ```
 
-`cmd/generate-encryption-key` can mint `encryption_key`. Mail tracking (public URL, HMAC, redirect allow-list) lives under **System → Mail Tracking** after boot. YAML is seed/fallback only. Click/open paths are generated per campaign, not globally.
+`cmd/generate-encryption-key` can mint `encryption_key`. Mail tracking (public URL, HMAC, redirect allow-list) is configured under **System → Mail Tracking** after boot — YAML is seed/fallback. Click/open paths are generated per campaign.
 
-Don't commit `config.yaml`, `data/`, or TLS keys (they're gitignored).
+Do not commit `config.yaml`, `data/`, or TLS keys (gitignored).
 
 ### 2. Run
 
 ```bash
-./fishing-platform
+./spearhook
 # or a build from ./release/ after ./build-all.sh
 ```
 
-If it complains about empty/default secrets, that's fine on a lab box. Rotate them before a real job.
+Empty/default secrets trigger a startup confirm — fine on a lab box. Rotate them before a real job.
 
 ### 3. Build
 
@@ -147,7 +172,7 @@ If it complains about empty/default secrets, that's fine on a lab box. Rotate th
 ./build-all.sh
 ```
 
-Frontend first, then control plane + agent for linux/windows/darwin (amd64 & arm64). Copies `config.yaml.example` and `agent.yaml.example` into `release/`.
+Builds the frontend, then control plane + agent for linux / windows / darwin (amd64 & arm64), and copies `config.yaml.example` + `agent.yaml.example` into `release/`.
 
 UI only (API already up):
 
@@ -157,25 +182,25 @@ cd frontend && npm install && npm run dev   # http://127.0.0.1:8081
 
 ### 4. Login
 
-Open `http://localhost:8000` (or your `server.port`). First boot dumps admin creds here:
+Open `http://localhost:8000` (or your `server.port`). First boot writes admin credentials to:
 
 ```bash
 cat data/admin_password.txt
 ```
 
-Save it, delete the file. Later resets: `cmd/reset-password`.
+Save the password, then delete the file. Later resets: `cmd/reset-password`.
 
 ---
 
 ## Agents
 
-Don't want everything on the control plane? Drop **fishing-agent** on other machines. One project can hit many nodes; one node can host many projects. Each binding gets its own port, revision, and logs. Submits/logs go back to the mothership. If the plane blinks, the agent buffers and retries.
+Deploy **spearhook-agent** to additional hosts when not every landing page should run on the control plane. A single project can be deployed to multiple nodes, and a single node can host multiple projects. Each binding has its own port, revision, and logs. Credential submissions are proxied to the control plane in real time; access logs are buffered in `pending-logs.json` and retransmitted when the control plane becomes reachable again.
 
-Project ports default to **`20000–30000/TCP`**. The agent dials **out** to the control plane. Visitors hit the agent (or `advertise_host` behind a reverse proxy — see the full guide).
+Project ports default to **`20000–30000/TCP`**. The agent initiates an **outbound** connection. Visitors access the agent directly; when it is behind a reverse proxy, configure `advertise_host` as described in the full guide.
 
-**Token** — set `security.agent_registration_token` on the plane (not the JWT secret) and restart. First register uses that shared token once, then `{work_dir}/state.json` holds the per-agent id/token (`0600` on Linux/macOS).
+**Token** — set `security.agent_registration_token` on the plane (not the JWT secret) and restart. First register uses that shared token once; then `{work_dir}/state.json` holds the per-agent id/token (`0600` on Linux/macOS).
 
-**Start** — `./build-all.sh` puts binaries + `agent.yaml.example` in `release/`:
+**Start** — after `./build-all.sh`:
 
 ```bash
 cp agent.yaml.example agent.yaml
@@ -187,104 +212,52 @@ registration_token: replace-with-a-long-random-agent-token
 ```
 
 ```bash
-chmod +x ./fishing-agent
-./fishing-agent -config ./agent.yaml
+chmod +x ./spearhook-agent
+./spearhook-agent -config ./agent.yaml
 ```
 
 ```powershell
-.\fishing-agent-windows-amd64.exe -config .\agent.yaml
+.\spearhook-agent-windows-amd64.exe -config .\agent.yaml
 ```
 
 You want a log line like `agent … connected to http://…`.
 
-**In the UI** — **System → Agents** until it's online (~90s without heartbeat = offline). **Projects → New**, pick agents, upload HTML. Each agent is its own instance (`pending` → `deploying` → `running`). Logs and records roll up on the project. Edit = new revision; add agent = deploy; uncheck = delete task.
+**In the UI** — **System → Agents** until online (~90s without heartbeat = offline). **Projects → New**, pick agents, attach a page. Each agent is its own instance (`pending` → `deploying` → `running`). Edit = new revision; add agent = deploy; uncheck = delete task.
 
-systemd, Windows service, proxy: **[docs/agent-deployment.md](docs/agent-deployment.md)** (Chinese).
+systemd, Windows service, reverse proxy: **[docs/agent-deployment.md](docs/agent-deployment.md)**.
 
 ---
 
 ## Console
 
-| | |
-|---|---|
-| **Dashboard** | Counts and host CPU/mem |
-| **Projects** | Overview, deployments, logs, records |
-| **Audit Logs** | Admin, no delete |
-| **Send Email** | Campaigns, open/click |
-| **Page Builder** | Upload / AI mirror |
-| **Info Gathering** | AI search → contacts |
-| **QR Phishing** | Live QR relay |
-| **Push Channels** | Webhook when someone submits |
-| **Agents** | Online / last seen |
-| **IP Blacklist** | Spray submits → ban the IP, keep blue team from flooding you |
-| **Mail Services** | SMTP |
-| **Users / AI / Mail Tracking** | Admin |
+| Area | What you do there |
+|------|-------------------|
+| **Dashboard** | Counts and host CPU / memory |
+| **AI Assistant** | Natural-language ops via platform tools (clone, create project, list agents, …) |
+| **Projects** | Overview, deployments, logs, credential records |
+| **Workbench → Page Builder** | Upload HTML or AI-mirror a URL into the page library |
+| **Workbench → Send Email** | Templates, campaigns, open/click |
+| **Workbench → Info Gathering** | AI web search → contacts CSV |
+| **Workbench → QR Phishing** | Live QR relays + capture script zip |
+| **Push Channels** | Webhooks on credential submission |
+| **Agents** | Online status / last seen |
+| **IP Blacklist** | Block abusive source IPs (added from credential records) |
+| **Mail Services** | SMTP profiles |
+| **Users / AI Settings / Mail Tracking** | Admin |
+| **Audit Logs** | Admin; immutable in-product |
 
-Pages POST to `/api/submit` by default. HTML: `{{SUBMIT_URL}}`, `{{REDIRECT_URL}}`, `{{QR_RELAY_URL}}`, `{{QR_RELAY_IMG}}`. Mail: `{{email}}`, `{{click_url}}`, `{{open_pixel}}`, `{{landing_url}}`, …  
+Pages POST to `/api/submit` by default. HTML placeholders: `{{SUBMIT_URL}}`, `{{REDIRECT_URL}}`, `{{QR_RELAY_URL}}`, `{{QR_RELAY_IMG}}`, …. Mail: `{{email}}`, `{{click_url}}`, `{{open_pixel}}`, `{{landing_url}}`, ….
+
 Guides: [EN](docs/placeholders.en.md) · [ZH](docs/placeholders.zh.md)
 
-Access log: `data/access-YYYY-MM-DD.log`. Fast dashboard polls stay out of the console, still in the file.
-
----
-
-## Docs
-
-| | |
-|---|---|
-| Placeholders (pages + mail) | [EN](docs/placeholders.en.md) · [ZH](docs/placeholders.zh.md) |
-| Agents (systemd, Windows, proxy) | [docs/agent-deployment.md](docs/agent-deployment.md) |
-| QR capture script | [EN](scripts/qr-relay/README.md) · [ZH](scripts/qr-relay/README.zh.md) — or download the zip from the QR page |
-
-QR: create a relay in the console, copy the upload token (shown once), drop it in the script config. It only uploads image frames + heartbeat. Public URL is `/q/{slug}.png`.
-
----
-
-## Security
-
-- Rotate `encryption_key`, `jwt_secret`, `container_secret`, `agent_registration_token`. Changing `encryption_key` breaks stored ciphertext (SMTP, robot secrets, captured passwords, mail-tracking secret).
-- Exposed console: `gin_mode: release` + Basic Auth.
-- Treat captures, recipient lists, webhook URLs, and AI keys as live ammo.
-- Audit log is not deletable in the product API. Operators only see their own stuff.
-
----
-
-## Stuck?
-
-| | |
-|---|---|
-| Can't open the UI | Port in `server.port`. If Basic Auth is on, the browser asks twice (perimeter then login). |
-| No admin password | `data/admin_password.txt` on first boot. Later: `cmd/reset-password`. |
-| Agent stays offline | It must **dial out** to `server_url`. ~90s without heartbeat = offline. Token must match `agent_registration_token` on first register. |
-| Mail opens/clicks are empty | **System → Mail Tracking**: enable it, set `public_base_url` to a URL the victim can actually hit. |
-| Local Flask won't start | `python3` in PATH, `pip install flask flask_cors requests`. |
-| Docker mode skipped | Engine not reachable (default `127.0.0.1:2375` in the startup check). Use local Flask or agents. |
-| QR health is stale | Capture script not running, or token/URL wrong. |
-
----
-
-## Layout
-
-```text
-main.go / handlers / models / middleware / utils / config
-agent/                 # edge binary
-frontend/              # Next.js → frontend/dist (embedded)
-cmd/                   # generate-encryption-key, reset-password
-docs/agent-deployment.md
-docs/placeholders.en.md
-docs/placeholders.zh.md
-config.yaml.example
-agent.yaml.example
-build-all.sh
-README.md / README.zh.md
-README.assets/
-```
+Access log: `data/access-YYYY-MM-DD.log`. High-frequency dashboard polls stay out of the console stream; they still land in the file.
 
 ---
 
 ## Disclaimer
 
-This is for red-team phishing **with permission**. Using it against people or systems you don't have authorization for is on you, and we don't support that.
+Spearhook is intended solely for authorized red-team phishing exercises and security-awareness training. Any use against people or systems for which you lack authorization is the sole responsibility of the user; the project does not support such use.
 
 Code is under the [MIT License](LICENSE).
 
-Issues and PRs welcome. Open a GitHub Issue if something's broken.
+Issues and PRs welcome. Open a GitHub Issue if something is broken.
