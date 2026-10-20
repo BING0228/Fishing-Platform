@@ -23,7 +23,6 @@
   <a href="#legal-notice">Legal</a> ·
   <a href="#overview">Overview</a> ·
   <a href="#features">Features</a> ·
-  <a href="https://p1temax.github.io/Spearhook/">Live demo</a> ·
   <a href="#architecture">Architecture</a> ·
   <a href="#quick-start">Quick start</a> ·
   <a href="#agents">Agents</a> ·

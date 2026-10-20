@@ -23,7 +23,6 @@
   <a href="#法律声明">法律声明</a> ·
   <a href="#项目简介">项目简介</a> ·
   <a href="#核心能力">核心能力</a> ·
-  <a href="https://p1temax.github.io/Spearhook/">在线演示</a> ·
   <a href="#架构">架构</a> ·
   <a href="#快速开始">快速开始</a> ·
   <a href="#agents">远程 Agent</a> ·
