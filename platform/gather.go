@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"spearhook/chatbus"
+	"spearhook/chattools/chatbus"
 	"spearhook/config"
 	"spearhook/models"
 	"spearhook/utils"

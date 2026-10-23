@@ -4,8 +4,8 @@
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="README.assets/logo-dark.svg" />
-    <img src="README.assets/logo.svg" alt="Spearhook" width="96" height="96" title="Spearhook" />
+    <source media="(prefers-color-scheme: dark)" srcset="assets/readme/logo-dark.svg" />
+    <img src="assets/readme/logo.svg" alt="Spearhook" width="96" height="96" title="Spearhook" />
   </picture>
 </p>
 
@@ -152,7 +152,7 @@ container:
 
 ```bash
 ./spearhook
-# 或使用 ./build-all.sh 後生成的 ./release/ 發行包
+# 或使用 ./scripts/build-all.sh 後生成的 ./release/ 發行包
 ```
 
 啟動時若檢測到空金鑰或預設金鑰，會顯示警告。實驗室環境可確認繼續；生產環境請先更換金鑰。
@@ -160,7 +160,7 @@ container:
 ### 3. 從原始碼構建
 
 ```bash
-./build-all.sh
+./scripts/build-all.sh
 ```
 
 先構建前端，再生成控制平面與 Agent（Linux / Windows / darwin，amd64 與 arm64），並將兩個示例設定複製至 `release/`。
@@ -193,7 +193,7 @@ cat data/admin_password.txt
 
 **權杖** — 在控制平面單獨設定 `security.agent_registration_token`（不要複用 JWT 金鑰），然後重啟。首次註冊使用該共享權杖；之後 `{work_dir}/state.json` 儲存該 Agent 的 ID 與權杖（Linux/macOS 許可權為 `0600`）。
 
-**啟動** — 執行 `./build-all.sh` 後：
+**啟動** — 執行 `./scripts/build-all.sh` 後：
 
 ```bash
 cp agent.yaml.example agent.yaml

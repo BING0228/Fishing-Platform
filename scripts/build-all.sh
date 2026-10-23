@@ -18,7 +18,7 @@ NC='\033[0m' # No Color
 
 # Step 1: Build frontend
 echo -e "${BLUE}[Step 1/2] Building frontend...${NC}"
-cd "$(dirname "$0")/frontend"
+cd "$(dirname "$0")/../frontend"
 if [ ! -d "node_modules" ]; then
     echo "Installing frontend dependencies..."
     npm install
@@ -66,7 +66,7 @@ while read -r os arch binary; do
     fi
 
 	agent_binary="${binary/spearhook/spearhook-agent}"
-	GOOS=$os GOARCH=$arch CGO_ENABLED=0 go build -ldflags="-s -w" -o "release/${agent_binary}" ./agent
+	GOOS=$os GOARCH=$arch CGO_ENABLED=0 go build -ldflags="-s -w" -o "release/${agent_binary}" ./cmd/spearhook-agent
 	if [ -f "release/${agent_binary}" ]; then
 		SIZE=$(du -h "release/${agent_binary}" | cut -f1)
 		echo -e "${GREEN}✅ Built Agent for $os ($arch) - $SIZE${NC}"

@@ -5,11 +5,11 @@
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="README.assets/logo-dark.svg" />
+    <source media="(prefers-color-scheme: dark)" srcset="assets/readme/logo-dark.svg" />
     <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="README.assets/logo-dark.svg" />
-    <img src="README.assets/logo.svg" alt="Spearhook" width="96" height="96" title="Spearhook" />
+    <source media="(prefers-color-scheme: dark)" srcset="assets/readme/logo-dark.svg" />
+    <img src="assets/readme/logo.svg" alt="Spearhook" width="96" height="96" title="Spearhook" />
   </picture>
 </p>
   </picture>
@@ -157,7 +157,7 @@ container:
 
 ``` bash
 ./spearhook
-# or a build from ./release/ after ./build-all.sh
+# or a build from ./release/ after ./scripts/build-all.sh
 ```
 
 空/デフォルトのシークレットは起動時の警告を表示します。実験環境では問題ありませんが、本番運用前に変更してください。
@@ -165,7 +165,7 @@ container:
 ### 3. ビルド
 
 ``` bash
-./build-all.sh
+./scripts/build-all.sh
 ```
 
 フロントエンドを構築し、次に Linux / Windows / darwin (amd64 および arm64) 用のコントロール プレーン + エージェントを構築し、`config.yaml.example` + `agent.yaml.example` を `release/` にコピーします。
@@ -198,7 +198,7 @@ cat data/admin_password.txt
 
 **トークン** — コントロールプレーンで `security.agent_registration_token`（JWT シークレットではない）を設定して再起動します。初回登録時に共有トークンを 1 回使用します。以降は `{work_dir}/state.json` にエージェント固有の ID/トークンを保持します（Linux/macOS は `0600`）。
 
-**起動** — `./build-all.sh` の後:
+**起動** — `./scripts/build-all.sh` の後:
 
 ``` bash
 cp agent.yaml.example agent.yaml

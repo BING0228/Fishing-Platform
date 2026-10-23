@@ -151,16 +151,16 @@ func TestREADMERequiredSectionsAndLinks(t *testing.T) {
 // access logs use pending-logs.json; proxySubmission returns 502 with no submit queue.
 func assertAgentBufferingDocsMatchCode(t *testing.T, root, en, zh string) {
 	t.Helper()
-	agentSrc := mustRead(t, filepath.Join(root, "agent", "main.go"))
+	agentSrc := mustRead(t, filepath.Join(root, "cmd", "spearhook-agent", "main.go"))
 	if !strings.Contains(agentSrc, "pending-logs.json") {
-		t.Fatal("agent/main.go missing pending-logs.json path — README claim would be wrong")
+		t.Fatal("cmd/spearhook-agent/main.go missing pending-logs.json path — README claim would be wrong")
 	}
 	if !strings.Contains(agentSrc, "func (a *Agent) proxySubmission") {
-		t.Fatal("agent/main.go missing proxySubmission")
+		t.Fatal("cmd/spearhook-agent/main.go missing proxySubmission")
 	}
 	// Live proxy failure path (no local submit buffer).
 	if !strings.Contains(agentSrc, `"upstream unavailable"`) || !strings.Contains(agentSrc, "StatusBadGateway") {
-		t.Fatal("agent/main.go proxySubmission no longer returns BadGateway on upstream failure")
+		t.Fatal("cmd/spearhook-agent/main.go proxySubmission no longer returns BadGateway on upstream failure")
 	}
 	// Docs must describe logs-only buffering, not durable submit queues.
 	for _, doc := range []struct{ name, body string }{{"README.md", en}, {"README.zh.md", zh}} {

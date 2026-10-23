@@ -45,8 +45,8 @@ fi
 echo "✅ Go version meets requirements (>= 1.21)"
 echo ""
 
-# Navigate to backend-go directory
-cd "$(dirname "$0")"
+# Navigate to repository root
+cd "$(dirname "$0")/.."
 echo "📁 Working directory: $(pwd)"
 echo ""
 

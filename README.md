@@ -4,8 +4,8 @@
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="README.assets/logo-dark.svg" />
-    <img src="README.assets/logo.svg" alt="Spearhook" width="96" height="96" title="Spearhook" />
+    <source media="(prefers-color-scheme: dark)" srcset="assets/readme/logo-dark.svg" />
+    <img src="assets/readme/logo.svg" alt="Spearhook" width="96" height="96" title="Spearhook" />
   </picture>
 </p>
 
@@ -152,7 +152,7 @@ Do not commit `config.yaml`, `data/`, or TLS keys (gitignored).
 
 ```bash
 ./spearhook
-# or a build from ./release/ after ./build-all.sh
+# or a build from ./release/ after ./scripts/build-all.sh
 ```
 
 Empty/default secrets trigger a startup confirm — fine on a lab box. Rotate them before a real job.
@@ -160,7 +160,7 @@ Empty/default secrets trigger a startup confirm — fine on a lab box. Rotate th
 ### 3. Build
 
 ```bash
-./build-all.sh
+./scripts/build-all.sh
 ```
 
 Builds the frontend, then control plane + agent for linux / windows / darwin (amd64 & arm64), and copies `config.yaml.example` + `agent.yaml.example` into `release/`.
@@ -191,7 +191,7 @@ Project ports default to **`20000–30000/TCP`**. The agent initiates an **outbo
 
 **Token** — set `security.agent_registration_token` on the plane (not the JWT secret) and restart. First register uses that shared token once; then `{work_dir}/state.json` holds the per-agent id/token (`0600` on Linux/macOS).
 
-**Start** — after `./build-all.sh`:
+**Start** — after `./scripts/build-all.sh`:
 
 ```bash
 cp agent.yaml.example agent.yaml

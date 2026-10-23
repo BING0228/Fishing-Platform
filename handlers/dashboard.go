@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"spearhook/config"
-	"spearhook/hostmetrics"
+	"spearhook/platform/hostmetrics"
 	"spearhook/models"
 	"spearhook/utils"
 )

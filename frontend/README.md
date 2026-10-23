@@ -23,4 +23,4 @@ npm run dev   # http://127.0.0.1:8081  (API via NEXT_PUBLIC_API_BASE)
 npm run build   # writes frontend/dist (used by //go:embed frontend/dist)
 ```
 
-`build-all.sh` still runs `npm run build` then embeds `frontend/dist`.
+`scripts/build-all.sh` still runs `npm run build` then embeds `frontend/dist`.

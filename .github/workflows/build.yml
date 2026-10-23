@@ -61,9 +61,9 @@ jobs:
 
       - name: Build control plane (linux/amd64)
         run: |
-          CGO_ENABLED=0 go build -ldflags="-s -w" -o fishing-platform-linux-amd64 main.go
-          CGO_ENABLED=0 go build -ldflags="-s -w" -o fishing-agent-linux-amd64 ./agent
-          ls -lh fishing-platform-linux-amd64 fishing-agent-linux-amd64
+          CGO_ENABLED=0 go build -ldflags="-s -w" -o spearhook-linux-amd64 .
+          CGO_ENABLED=0 go build -ldflags="-s -w" -o spearhook-agent-linux-amd64 ./cmd/spearhook-agent
+          ls -lh spearhook-linux-amd64 spearhook-agent-linux-amd64
 
   # ---------------------------------------------------------------------------
   # Tag (v*) / manual: cross-compile all targets + upload artifacts / Release
@@ -114,12 +114,12 @@ jobs:
           rm -rf release/*
 
           targets=(
-            "linux amd64 fishing-platform-linux-amd64"
-            "linux arm64 fishing-platform-linux-arm64"
-            "windows amd64 fishing-platform-windows-amd64.exe"
-            "windows arm64 fishing-platform-windows-arm64.exe"
-            "darwin amd64 fishing-platform-macos-amd64"
-            "darwin arm64 fishing-platform-macos-arm64"
+            "linux amd64 spearhook-linux-amd64"
+            "linux arm64 spearhook-linux-arm64"
+            "windows amd64 spearhook-windows-amd64.exe"
+            "windows arm64 spearhook-windows-arm64.exe"
+            "darwin amd64 spearhook-macos-amd64"
+            "darwin arm64 spearhook-macos-arm64"
           )
 
           for entry in "${targets[@]}"; do
@@ -128,10 +128,10 @@ jobs:
             GOOS="${os}" GOARCH="${arch}" CGO_ENABLED=0 \
               go build -ldflags="-s -w" -o "release/${binary}" main.go
 
-            agent_binary="${binary/fishing-platform/fishing-agent}"
+            agent_binary="${binary/spearhook/spearhook-agent}"
             echo "==> Building ${agent_binary}"
             GOOS="${os}" GOARCH="${arch}" CGO_ENABLED=0 \
-              go build -ldflags="-s -w" -o "release/${agent_binary}" ./agent
+              go build -ldflags="-s -w" -o "release/${agent_binary}" ./cmd/spearhook-agent
           done
 
           cp config.yaml.example release/config.yaml.example
@@ -147,17 +147,17 @@ jobs:
 
           # One archive per OS/arch with both binaries + example configs
           pairs=(
-            "linux-amd64:fishing-platform-linux-amd64:fishing-agent-linux-amd64"
-            "linux-arm64:fishing-platform-linux-arm64:fishing-agent-linux-arm64"
-            "windows-amd64:fishing-platform-windows-amd64.exe:fishing-agent-windows-amd64.exe"
-            "windows-arm64:fishing-platform-windows-arm64.exe:fishing-agent-windows-arm64.exe"
-            "macos-amd64:fishing-platform-macos-amd64:fishing-agent-macos-amd64"
-            "macos-arm64:fishing-platform-macos-arm64:fishing-agent-macos-arm64"
+            "linux-amd64:spearhook-linux-amd64:spearhook-agent-linux-amd64"
+            "linux-arm64:spearhook-linux-arm64:spearhook-agent-linux-arm64"
+            "windows-amd64:spearhook-windows-amd64.exe:spearhook-agent-windows-amd64.exe"
+            "windows-arm64:spearhook-windows-arm64.exe:spearhook-agent-windows-arm64.exe"
+            "macos-amd64:spearhook-macos-amd64:spearhook-agent-macos-amd64"
+            "macos-arm64:spearhook-macos-arm64:spearhook-agent-macos-arm64"
           )
 
           for pair in "${pairs[@]}"; do
             IFS=':' read -r name platform agent <<<"${pair}"
-            staging="fishing-platform-${name}"
+            staging="spearhook-${name}"
             mkdir -p "${staging}"
             cp "${platform}" "${agent}" config.yaml.example agent.yaml.example "${staging}/"
             if [[ "${name}" == windows-* ]]; then
@@ -173,10 +173,10 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: fishing-platform-binaries
+          name: spearhook-binaries
           path: |
-            release/fishing-platform-*
-            release/fishing-agent-*
+            release/spearhook-*
+            release/spearhook-agent-*
             release/config.yaml.example
             release/agent.yaml.example
             release/archives/*

@@ -57,6 +57,7 @@ docs/*-experience.md
 
 # Local audit/security reviews (internal, do not publish)
 docs/*-review.md
+assets/readme/backup/
 README.assets/backup/
 
 # Dependencies and package-manager caches
@@ -76,6 +77,7 @@ frontend/.next/
 frontend/out/
 
 # Local screenshots / personal UI captures
+assets/readme/image-*.png
 README.assets/image-*.png
 
 # Local QR relay script secrets

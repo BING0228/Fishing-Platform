@@ -10,7 +10,7 @@
 #
 # Requirements:
 #   - SSH access as root (or sudo-capable user); key (BatchMode) or SSH_PASSWORD.
-#   - release/spearhook-linux-{amd64,arm64} built (build-all.sh or:
+#   - release/spearhook-linux-{amd64,arm64} built (scripts/build-all.sh or:
 #     GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags='-s -w' -o release/spearhook-linux-amd64 .)
 #   - The remote host has systemd and openssl.
 #

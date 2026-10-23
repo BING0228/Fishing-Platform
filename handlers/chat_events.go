@@ -3,7 +3,7 @@ package handlers
 import (
 	"time"
 
-	"spearhook/chatbus"
+	"spearhook/chattools/chatbus"
 
 	"github.com/gin-gonic/gin"
 )

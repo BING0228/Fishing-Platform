@@ -5,11 +5,11 @@
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="README.assets/logo-dark.svg" />
+    <source media="(prefers-color-scheme: dark)" srcset="assets/readme/logo-dark.svg" />
     <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="README.assets/logo-dark.svg" />
-    <img src="README.assets/logo.svg" alt="Spearhook" width="96" height="96" title="Spearhook" />
+    <source media="(prefers-color-scheme: dark)" srcset="assets/readme/logo-dark.svg" />
+    <img src="assets/readme/logo.svg" alt="Spearhook" width="96" height="96" title="Spearhook" />
   </picture>
 </p>
   </picture>
@@ -157,7 +157,7 @@ container:
 
 ``` bash
 ./spearhook
-# or a build from ./release/ after ./build-all.sh
+# or a build from ./release/ after ./scripts/build-all.sh
 ```
 
 비어 있거나 기본값인 시크릿은 시작 시 경고를 표시합니다. 랩 환경에서는 괜찮지만 실제 작업 전에 교체하십시오.
@@ -165,7 +165,7 @@ container:
 ### 3. 빌드
 
 ``` bash
-./build-all.sh
+./scripts/build-all.sh
 ```
 
 프런트엔드를 빌드한 다음 linux/windows/darwin(amd64 및 arm64)용 컨트롤 플레인 + 에이전트를 빌드하고 `config.yaml.example` + `agent.yaml.example`을 `release/`에 복사합니다.
@@ -198,7 +198,7 @@ cat data/admin_password.txt
 
 **토큰** — 컨트롤 플레인에서 `security.agent_registration_token`(JWT 시크릿 아님)을 설정하고 재시작합니다. 첫 등록 시 공유 토큰을 한 번 사용하며, 이후 `{work_dir}/state.json`에 에이전트별 ID/토큰을 보관합니다(Linux/macOS는 `0600`).
 
-**시작** — `./build-all.sh` 후:
+**시작** — `./scripts/build-all.sh` 후:
 
 ``` bash
 cp agent.yaml.example agent.yaml

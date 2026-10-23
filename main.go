@@ -13,7 +13,7 @@ import (
 
 	"spearhook/config"
 	"spearhook/handlers"
-	"spearhook/hostmetrics"
+	"spearhook/platform/hostmetrics"
 	"spearhook/middleware"
 	"spearhook/models"
 	"spearhook/utils"
@@ -29,7 +29,7 @@ import (
 //go:embed all:frontend/dist
 var frontendFS embed.FS
 
-//go:embed qqwry.dat
+//go:embed assets/qqwry.dat
 var qqwryData []byte
 
 //go:embed scripts/qr-relay/qr_relay.py scripts/qr-relay/requirements.txt scripts/qr-relay/README.md scripts/qr-relay/README.zh.md scripts/qr-relay/config.example.yaml

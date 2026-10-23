@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"spearhook/chatbus"
+	"spearhook/chattools/chatbus"
 	"spearhook/models"
 
 	"github.com/gin-gonic/gin"

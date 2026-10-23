@@ -4,8 +4,8 @@
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="README.assets/logo-dark.svg" />
-    <img src="README.assets/logo.svg" alt="Spearhook" width="96" height="96" title="Spearhook" />
+    <source media="(prefers-color-scheme: dark)" srcset="assets/readme/logo-dark.svg" />
+    <img src="assets/readme/logo.svg" alt="Spearhook" width="96" height="96" title="Spearhook" />
   </picture>
 </p>
 
@@ -152,7 +152,7 @@ container:
 
 ```bash
 ./spearhook
-# 或使用 ./build-all.sh 后生成的 ./release/ 发行包
+# 或使用 ./scripts/build-all.sh 后生成的 ./release/ 发行包
 ```
 
 启动时若密钥为空或仍为默认值，将显示警告。实验室环境可确认继续；生产环境请先更换密钥。
@@ -160,7 +160,7 @@ container:
 ### 3. 从源码构建
 
 ```bash
-./build-all.sh
+./scripts/build-all.sh
 ```
 
 先构建前端，再生成控制面与 Agent（Linux / Windows / darwin，amd64 与 arm64），并将两个示例配置复制至 `release/`。
@@ -193,7 +193,7 @@ cat data/admin_password.txt
 
 **令牌** — 在控制面单独设置 `security.agent_registration_token`（不要复用 JWT 密钥），然后重启。首次注册使用该共享令牌；之后 `{work_dir}/state.json` 保存该 Agent 的 ID 与令牌（Linux/macOS 权限为 `0600`）。
 
-**启动** — 执行 `./build-all.sh` 后：
+**启动** — 执行 `./scripts/build-all.sh` 后：
 
 ```bash
 cp agent.yaml.example agent.yaml

@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"spearhook/chatbus"
+	"spearhook/chattools/chatbus"
 	"spearhook/config"
 	"spearhook/models"
 

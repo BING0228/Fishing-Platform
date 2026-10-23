@@ -85,7 +85,7 @@ POST /api/agent/deployments/{id}/logs/     上传项目日志
 在项目根目录执行：
 
 ```bash
-./build-all.sh
+./scripts/build-all.sh
 ```
 
 `release/` 目录会同时生成主控端和 Agent 的多平台文件，例如：
@@ -103,14 +103,14 @@ agent.yaml.example
 ### 5.2 单独构建当前平台
 
 ```bash
-go build -o spearhook-agent ./agent
+go build -o spearhook-agent ./cmd/spearhook-agent
 ```
 
 ### 5.3 Linux AMD64 交叉构建
 
 ```bash
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-  go build -ldflags="-s -w" -o spearhook-agent-linux-amd64 ./agent
+  go build -ldflags="-s -w" -o spearhook-agent-linux-amd64 ./cmd/spearhook-agent
 ```
 
 ## 6. Agent 配置文件
@@ -547,7 +547,7 @@ no project port available for agent
 
 ```bash
 # 构建 Agent
-go build -o spearhook-agent ./agent
+go build -o spearhook-agent ./cmd/spearhook-agent
 
 # 查看参数
 ./spearhook-agent -h
