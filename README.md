@@ -53,15 +53,6 @@ One Go binary embeds the UI (`frontend/dist`) and serves API + console on the sa
 
 ---
 
-## Languages
-
-English is the source language for the console and the primary documentation
-language, and it is the fallback when a translation is missing. The web console
-also ships with Simplified Chinese, Traditional Chinese, Japanese, and Korean.
-Use the language picker in the header or on the login screen; the choice is
-stored per browser. This README is maintained in all five languages; English
-remains the source of truth when they differ.
-
 ## Features
 
 - **AI Assistant** — natural-language ops assistant (`/chat`). Token-level SSE streaming via a whitelisted tool registry (`list_agents`, `clone_page`, `create_project`, `start_info_gather`, `create_mail_draft`, `send_mail_campaign`, QR/credentials/blacklist, …). Read-only tools execute automatically, destructive actions require confirmation, and every write is recorded in the audit log. The assistant does not generate HTML directly; URL mirroring is handled by the page-library pipeline.

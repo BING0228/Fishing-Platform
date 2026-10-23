@@ -12,8 +12,8 @@ import (
 var readmeENRequired = []string{
 	"## Legal notice",
 	"## Overview",
-	"## Languages",
 	"## Features",
+
 	"## Architecture",
 	"## Quick start",
 	"## Agents",
@@ -25,8 +25,8 @@ var readmeENRequired = []string{
 var readmeZHRequired = []string{
 	"## 法律声明",
 	"## 项目简介",
-	"## 语言",
 	"## 核心能力",
+
 	"## 架构",
 	"## 快速开始",
 	"## 远程 Agent",
