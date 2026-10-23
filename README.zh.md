@@ -241,7 +241,7 @@ systemd、Windows 服务与反向代理配置：**[docs/agent-deployment.md](doc
 
 页面默认提交至 `/api/submit`。HTML 占位符：`{{SUBMIT_URL}}`、`{{REDIRECT_URL}}`、`{{QR_RELAY_URL}}`、`{{QR_RELAY_IMG}}` 等。邮件占位符：`{{email}}`、`{{click_url}}`、`{{open_pixel}}`、`{{landing_url}}` 等。
 
-说明：[中文](docs/placeholders.zh.md) · [英文](docs/placeholders.en.md)
+说明：[EN](docs/placeholders.en.md) · [简体中文](docs/placeholders.zh.md) · [繁體中文](docs/placeholders.zh-TW.md) · [日本語](docs/placeholders.ja.md) · [한국어](docs/placeholders.ko.md)
 
 访问日志：`data/access-YYYY-MM-DD.log`。仪表盘的高频轮询不会写入控制台事件流，但仍会记录到日志文件。
 

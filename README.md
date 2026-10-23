@@ -239,7 +239,7 @@ systemd, Windows service, reverse proxy: **[docs/agent-deployment.md](docs/agent
 
 Pages POST to `/api/submit` by default. HTML placeholders: `{{SUBMIT_URL}}`, `{{REDIRECT_URL}}`, `{{QR_RELAY_URL}}`, `{{QR_RELAY_IMG}}`, …. Mail: `{{email}}`, `{{click_url}}`, `{{open_pixel}}`, `{{landing_url}}`, ….
 
-Guides: [EN](docs/placeholders.en.md) · [ZH](docs/placeholders.zh.md)
+Guides: [EN](docs/placeholders.en.md) · [ZH](docs/placeholders.zh.md) · [ZH-TW](docs/placeholders.zh-TW.md) · [JA](docs/placeholders.ja.md) · [KO](docs/placeholders.ko.md)
 
 Access log: `data/access-YYYY-MM-DD.log`. High-frequency dashboard polls stay out of the console stream; they still land in the file.
 

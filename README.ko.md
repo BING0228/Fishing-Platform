@@ -248,7 +248,7 @@ systemd, Windows 서비스, 리버스 프록시: **[docs/agent-deployment.md](do
 
 페이지는 기본적으로 `/api/submit`에 POST됩니다. HTML 플레이스홀더: `{{SUBMIT_URL}}`, `{{REDIRECT_URL}}`, `{{QR_RELAY_URL}}`, `{{QR_RELAY_IMG}}` 등. 메일: `{{email}}`, `{{click_url}}`, `{{open_pixel}}`, `{{landing_url}}` 등.
 
-가이드: [EN](docs/placeholders.en.md) · [ZH](docs/placeholders.zh.md)
+가이드: [EN](docs/placeholders.en.md) · [ZH](docs/placeholders.zh.md) · [ZH-TW](docs/placeholders.zh-TW.md) · [JA](docs/placeholders.ja.md) · [KO](docs/placeholders.ko.md)
 
 액세스 로그: `data/access-YYYY-MM-DD.log`. 빈도가 높은 대시보드 폴링은 콘솔 스트림에서 제외되지만 파일에는 기록됩니다.
 

@@ -248,7 +248,7 @@ systemd、Windows サービス、リバースプロキシ: **[docs/agent-deploym
 
 ページは既定で `/api/submit` に POST されます。HTML プレースホルダー: `{{SUBMIT_URL}}`、`{{REDIRECT_URL}}`、`{{QR_RELAY_URL}}`、`{{QR_RELAY_IMG}}` など。メール: `{{email}}`、`{{click_url}}`、`{{open_pixel}}`、`{{landing_url}}` など。
 
-ガイド: [EN](docs/placeholders.en.md) · [ZH](docs/placeholders.zh.md)
+ガイド: [EN](docs/placeholders.en.md) · [ZH](docs/placeholders.zh.md) · [ZH-TW](docs/placeholders.zh-TW.md) · [JA](docs/placeholders.ja.md) · [KO](docs/placeholders.ko.md)
 
 アクセスログ: `data/access-YYYY-MM-DD.log`。高頻度のダッシュボードポーリングはコンソールストリームには含まれませんが、ファイルには記録されます。
 

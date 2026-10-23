@@ -10,6 +10,9 @@ These files are tracked in git and linked from the root README.
 |----------|----------|-------------|
 | [placeholders.en.md](placeholders.en.md) | EN | HTML + mail template placeholders |
 | [placeholders.zh.md](placeholders.zh.md) | ZH | 页面与邮件占位符说明 |
+| [placeholders.zh-TW.md](placeholders.zh-TW.md) | ZH-TW | 頁面與郵件佔位符說明 |
+| [placeholders.ja.md](placeholders.ja.md) | JA | HTML / メールのプレースホルダー |
+| [placeholders.ko.md](placeholders.ko.md) | KO | HTML / 메일 플레이스홀더 안내 |
 | [agent-deployment.md](agent-deployment.md) | ZH | Agent install: systemd, Windows service, reverse proxy |
 | [ai-native-assessment.md](ai-native-assessment.md) | ZH | AI Native 可行性评估与落地路径 |
 | [ai-native-architecture.md](ai-native-architecture.md) | ZH | AI Native 实现架构（包结构 / 工具表 / SSE / PR 切片） |

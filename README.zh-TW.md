@@ -241,7 +241,7 @@ systemd、Windows 服務與反向代理設定：**[docs/agent-deployment.md](doc
 
 頁面預設提交至 `/api/submit`。HTML 佔位符：`{{SUBMIT_URL}}`、`{{REDIRECT_URL}}`、`{{QR_RELAY_URL}}`、`{{QR_RELAY_IMG}}` 等。郵件佔位符：`{{email}}`、`{{click_url}}`、`{{open_pixel}}`、`{{landing_url}}` 等。
 
-說明：[中文](docs/placeholders.zh.md) · [英文](docs/placeholders.en.md)
+說明：[EN](docs/placeholders.en.md) · [简体中文](docs/placeholders.zh.md) · [繁體中文](docs/placeholders.zh-TW.md) · [日本語](docs/placeholders.ja.md) · [한국어](docs/placeholders.ko.md)
 
 存取日誌：`data/access-YYYY-MM-DD.log`。儀表盤的高頻輪詢不會寫入控制台事件流，但仍會記錄到日誌檔案。
 
